@@ -6,13 +6,24 @@ import type { Trip } from "@/lib/types";
 
 interface Props {
   trips: Trip[];
+  canExcel: boolean;
+  onExcelBlocked?: () => void;
 }
 
-export default function ExportButtons({ trips }: Props) {
+export default function ExportButtons({
+  trips,
+  canExcel,
+  onExcelBlocked,
+}: Props) {
   const [busy, setBusy] = useState(false);
-  const disabled = trips.length === 0 || busy;
+  const empty = trips.length === 0;
 
   async function onXlsx() {
+    if (!canExcel) {
+      onExcelBlocked?.();
+      return;
+    }
+    if (empty || busy) return;
     setBusy(true);
     try {
       await exportXlsx(trips);
@@ -21,23 +32,48 @@ export default function ExportButtons({ trips }: Props) {
     }
   }
 
+  const base =
+    "rounded-lg border px-3 py-2 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2";
+  const enabled =
+    "border-slate-300 bg-white text-slate-800 hover:bg-slate-50";
+  const disabledCls =
+    "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400";
+
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
-        disabled={disabled}
+        disabled={empty}
         onClick={() => exportCsv(trips)}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        title={empty ? "Dodaj przejazdy, aby eksportować" : "Pobierz CSV"}
+        className={`${base} ${empty ? disabledCls : enabled}`}
       >
         Eksport CSV
       </button>
       <button
         type="button"
-        disabled={disabled}
+        disabled={empty && canExcel}
         onClick={onXlsx}
-        className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        title={
+          !canExcel
+            ? "Excel dostępny w Premium"
+            : empty
+              ? "Dodaj przejazdy, aby eksportować"
+              : "Pobierz Excel"
+        }
+        className={`${base} ${
+          !canExcel
+            ? "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+            : empty || busy
+              ? disabledCls
+              : enabled
+        }`}
       >
-        {busy ? "Generuję…" : "Eksport Excel (.xlsx)"}
+        {busy
+          ? "Generuję…"
+          : canExcel
+            ? "Eksport Excel (.xlsx)"
+            : "Excel — Premium"}
       </button>
     </div>
   );
