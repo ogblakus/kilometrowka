@@ -7,8 +7,8 @@ import { useState } from "react";
 const links = [
   { href: "/", label: "Start" },
   { href: "/kalkulator", label: "Kalkulator" },
-  { href: "/#dla-kogo", label: "Dla kogo" },
   { href: "/#cennik", label: "Cennik" },
+  { href: "/kup", label: "Premium" },
 ];
 
 export default function Header() {
@@ -18,7 +18,10 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 font-semibold text-slate-900">
+        <Link
+          href="/"
+          className="flex items-center gap-2 font-semibold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 rounded-lg"
+        >
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-sm text-white">
             km
           </span>
@@ -27,19 +30,21 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 sm:flex">
+        <nav className="hidden items-center gap-1 sm:flex" aria-label="Główne">
           {links.map((l) => {
             const active =
               l.href === "/kalkulator"
                 ? pathname.startsWith("/kalkulator")
-                : l.href === "/"
-                  ? pathname === "/"
-                  : false;
+                : l.href === "/kup"
+                  ? pathname.startsWith("/kup")
+                  : l.href === "/"
+                    ? pathname === "/"
+                    : false;
             return (
               <Link
                 key={l.href}
                 href={l.href}
-                className={`rounded-lg px-3 py-1.5 text-sm transition ${
+                className={`rounded-lg px-3 py-1.5 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                   active
                     ? "bg-slate-100 font-medium text-slate-900"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -51,7 +56,7 @@ export default function Header() {
           })}
           <Link
             href="/kalkulator"
-            className="ml-2 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+            className="ml-2 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
           >
             Otwórz ewidencję
           </Link>
@@ -59,11 +64,20 @@ export default function Header() {
 
         <button
           type="button"
-          className="rounded-lg border border-slate-200 p-2 sm:hidden"
-          aria-label="Menu"
+          className="rounded-lg border border-slate-200 p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 sm:hidden"
+          aria-label={open ? "Zamknij menu" : "Otwórz menu"}
+          aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden
+          >
             {open ? (
               <path d="M6 6l12 12M6 18L18 6" />
             ) : (
