@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -14,17 +14,60 @@ const geistMono = Geist_Mono({
   subsets: ["latin", "latin-ext"],
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+  "https://kilometrowka-nine.vercel.app";
+
 export const metadata: Metadata = {
-  title: "Kilometrówka.app — ewidencja przejazdów i kalkulator",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Kilometrówka.app — ewidencja przejazdów i kalkulator",
+    template: "%s · Kilometrówka.app",
+  },
   description:
-    "Prosta ewidencja kilometrówki i diet krajowych na 2026. Stawki Dz.U. 2023 poz. 5. Eksport CSV i Excel. Dane lokalnie w przeglądarce.",
+    "Prosta ewidencja kilometrówki i diet krajowych na 2026. Stawki Dz.U. 2023 poz. 5. Free: 10 przejazdów/mies + CSV. Premium: Excel, diety, bez limitów. Dane lokalnie w przeglądarce.",
+  applicationName: "Kilometrówka.app",
+  authors: [{ name: "Kilometrówka.app" }],
+  keywords: [
+    "kilometrówka",
+    "ewidencja przejazdów",
+    "dieta krajowa",
+    "stawki 2026",
+    "kalkulator kilometrów",
+    "eksport Excel",
+  ],
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    title: "Kilometrówka.app",
+    title: "Kilometrówka.app — ewidencja przejazdów",
     description:
-      "Ewidencja przejazdów, kalkulator kilometrówki i diet krajowych — Polska 2026.",
+      "Ewidencja przejazdów, kalkulator kilometrówki i diet krajowych — Polska 2026. Bez konta, dane w przeglądarce.",
+    url: siteUrl,
+    siteName: "Kilometrówka.app",
     locale: "pl_PL",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kilometrówka.app",
+    description:
+      "Ewidencja kilometrówki i diet krajowych 2026. Free + Premium.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: "/icon.svg",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f172a",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
