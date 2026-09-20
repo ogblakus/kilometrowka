@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Disclaimer from "@/components/Disclaimer";
-import WaitlistForm from "@/components/WaitlistForm";
+import PricingSection from "@/components/PricingSection";
 import {
   KILOMETROWKA_YEAR,
   VEHICLE_RATES,
@@ -18,12 +18,12 @@ const steps = [
   {
     n: "2",
     title: "Pilnuj ewidencji",
-    text: "Edytuj, usuwaj, przeglądaj sumy miesięczne. Wszystko lokalnie.",
+    text: "Edytuj, usuwaj, filtruj po miesiącu, przeglądaj sumy. Wszystko lokalnie.",
   },
   {
     n: "3",
     title: "Eksportuj",
-    text: "Pobierz CSV lub Excel (.xlsx) do księgowości albo rozliczenia.",
+    text: "CSV na Free. Excel (.xlsx) i diety w Premium — do księgowości lub rozliczenia.",
   },
 ];
 
@@ -61,13 +61,13 @@ export default function HomePage() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/kalkulator"
-              className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+              className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             >
               Otwórz kalkulator
             </Link>
             <a
               href="#cennik"
-              className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             >
               Zobacz cennik
             </a>
@@ -139,7 +139,7 @@ export default function HomePage() {
           <div className="mt-8">
             <Link
               href="/kalkulator"
-              className="text-sm font-medium text-slate-900 underline-offset-4 hover:underline"
+              className="text-sm font-medium text-slate-900 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
             >
               Przejdź do ewidencji →
             </Link>
@@ -151,7 +151,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-5xl px-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold text-slate-900">
-              Diety krajowe (opcjonalnie)
+              Diety krajowe (Premium)
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">
               Obowiązująca dieta krajowa:{" "}
@@ -163,63 +163,16 @@ export default function HomePage() {
               Projekt podwyższenia diety do 60 zł <em>nie jest prawem</em>.
             </p>
             <Link
-              href="/kalkulator"
+              href="/kup"
               className="mt-4 inline-block text-sm font-medium text-slate-900 underline-offset-4 hover:underline"
             >
-              Oblicz dietę w kalkulatorze →
+              Odblokuj diety w Premium →
             </Link>
           </div>
         </div>
       </section>
 
-      <section id="cennik" className="scroll-mt-20 border-t border-slate-200 bg-slate-50 py-16">
-        <div className="mx-auto max-w-5xl px-4">
-          <h2 className="text-2xl font-bold text-slate-900">Cennik (zapowiedź)</h2>
-          <p className="mt-2 max-w-2xl text-slate-600">
-            MVP jest darmowe i działa lokalnie. Planujemy prosty abonament
-            roczny z synchronizacją i PDF — zostaw e-mail na liście oczekujących.
-          </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <p className="text-sm font-medium text-slate-500">MVP teraz</p>
-              <p className="mt-1 text-3xl font-bold text-slate-900">0 zł</p>
-              <ul className="mt-4 space-y-2 text-sm text-slate-600">
-                <li>✓ Ewidencja przejazdów (localStorage)</li>
-                <li>✓ Stawki kilometrówki {KILOMETROWKA_YEAR}</li>
-                <li>✓ Eksport CSV i Excel</li>
-                <li>✓ Kalkulator diety krajowej</li>
-              </ul>
-              <Link
-                href="/kalkulator"
-                className="mt-6 inline-block rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-              >
-                Korzystaj za darmo
-              </Link>
-            </div>
-            <div className="rounded-xl border-2 border-slate-900 bg-white p-6 shadow-sm">
-              <p className="text-sm font-medium text-slate-500">Plan roczny</p>
-              <p className="mt-1 text-3xl font-bold text-slate-900">
-                99–149{" "}
-                <span className="text-base font-normal text-slate-500">
-                  zł/rok
-                </span>
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-slate-600">
-                <li>• Synchronizacja między urządzeniami</li>
-                <li>• Eksport PDF ewidencji</li>
-                <li>• Archiwum lat podatkowych</li>
-                <li>• Priorytetowe wsparcie</li>
-              </ul>
-              <div className="mt-6">
-                <p className="mb-2 text-xs text-slate-500">
-                  Lista oczekujących (zapis lokalny):
-                </p>
-                <WaitlistForm />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      <PricingSection />
 
       <section className="py-12">
         <div className="mx-auto max-w-5xl px-4">
