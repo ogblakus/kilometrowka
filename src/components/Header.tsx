@@ -2,27 +2,50 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 const links = [
   { href: "/", label: "Start" },
   { href: "/kalkulator", label: "Kalkulator" },
   { href: "/#cennik", label: "Cennik" },
+  { href: "/#faq", label: "FAQ" },
   { href: "/kup", label: "Premium" },
 ];
 
 export default function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const menuId = useId();
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
         <Link
           href="/"
-          className="flex items-center gap-2 font-semibold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 rounded-lg"
+          className="flex min-h-11 items-center gap-2 font-semibold text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 rounded-lg"
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-sm text-white">
+          <span
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-sm text-white"
+            aria-hidden
+          >
             km
           </span>
           <span>
@@ -30,7 +53,7 @@ export default function Header() {
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 sm:flex" aria-label="Główne">
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Główne">
           {links.map((l) => {
             const active =
               l.href === "/kalkulator"
@@ -44,7 +67,7 @@ export default function Header() {
               <Link
                 key={l.href}
                 href={l.href}
-                className={`rounded-lg px-3 py-1.5 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+                className={`rounded-lg px-3 py-2 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                   active
                     ? "bg-slate-100 font-medium text-slate-900"
                     : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
@@ -56,7 +79,7 @@ export default function Header() {
           })}
           <Link
             href="/kalkulator"
-            className="ml-2 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+            className="ml-2 inline-flex min-h-10 items-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
           >
             Otwórz ewidencję
           </Link>
@@ -64,14 +87,15 @@ export default function Header() {
 
         <button
           type="button"
-          className="rounded-lg border border-slate-200 p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 sm:hidden"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 md:hidden"
           aria-label={open ? "Zamknij menu" : "Otwórz menu"}
           aria-expanded={open}
+          aria-controls={menuId}
           onClick={() => setOpen((v) => !v)}
         >
           <svg
-            width="20"
-            height="20"
+            width="22"
+            height="22"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -88,13 +112,16 @@ export default function Header() {
       </div>
 
       {open && (
-        <div className="border-t border-slate-100 bg-white px-4 py-3 sm:hidden">
-          <div className="flex flex-col gap-1">
+        <div
+          id={menuId}
+          className="border-t border-slate-100 bg-white px-4 py-3 md:hidden"
+        >
+          <nav className="flex flex-col gap-1" aria-label="Menu mobilne">
             {links.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
-                className="rounded-lg px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                className="rounded-lg px-3 py-3 text-base text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                 onClick={() => setOpen(false)}
               >
                 {l.label}
@@ -102,12 +129,12 @@ export default function Header() {
             ))}
             <Link
               href="/kalkulator"
-              className="mt-1 rounded-lg bg-slate-900 px-3 py-2 text-center text-sm font-medium text-white"
+              className="mt-1 inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-3 py-3 text-center text-sm font-medium text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
               onClick={() => setOpen(false)}
             >
               Otwórz ewidencję
             </Link>
-          </div>
+          </nav>
         </div>
       )}
     </header>
