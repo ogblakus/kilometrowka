@@ -47,6 +47,7 @@ export function canUseDieta(plan: Plan): boolean {
   return plan === "premium";
 }
 
+/** Legacy public checkout URL (Lemon / Stripe Payment Link). Prefer server Checkout Sessions. */
 export function getCheckoutUrl(): string | null {
   const lemon = process.env.NEXT_PUBLIC_LEMON_CHECKOUT_URL?.trim();
   const stripe = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK?.trim();
