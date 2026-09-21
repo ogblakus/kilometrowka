@@ -1,16 +1,21 @@
 import type { Plan } from "@/lib/plan";
-import { savePlan } from "@/lib/plan";
 import type { Trip } from "@/lib/types";
 
+const PLAN_KEY = "kilometrowka.app.plan.v1";
+
+/**
+ * Load plan from Neon via /api/me (Clerk session).
+ * Caches into localStorage; signed-in UI must use the returned value as source of truth.
+ * Does not dispatch kilometrowka:plan (avoids refresh loops).
+ */
 export async function fetchCloudPlan(): Promise<Plan | null> {
   try {
     const res = await fetch("/api/me");
     if (!res.ok) return null;
     const data = (await res.json()) as { plan?: Plan };
     if (data.plan === "premium" || data.plan === "free") {
-      savePlan(data.plan);
       if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("kilometrowka:plan"));
+        localStorage.setItem(PLAN_KEY, data.plan);
       }
       return data.plan;
     }

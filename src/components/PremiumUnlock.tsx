@@ -1,14 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { savePlan } from "@/lib/plan";
 
 /**
- * Lokalny override do testów: /kalkulator?premium=1
- * Prawdziwe odblokowanie będzie przez webhook płatności.
+ * Guest-only local override for demos: /kalkulator?premium=1
+ * Signed-in users get plan exclusively from Neon (/api/me) — query flag ignored.
  */
 export default function PremiumUnlock() {
+  const { isSignedIn } = useAuth();
   const search = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -16,24 +18,27 @@ export default function PremiumUnlock() {
 
   useEffect(() => {
     const flag = search.get("premium");
+    if (!flag) return;
+
+    // Strip flag from URL either way
+    const next = new URLSearchParams(search.toString());
+    next.delete("premium");
+    const q = next.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname);
+
+    if (isSignedIn) {
+      // Do not write local Premium for signed-in accounts
+      return;
+    }
+
     if (flag === "1" || flag === "true") {
       savePlan("premium");
-      setMsg("Premium odblokowane lokalnie (tryb testowy).");
-      const next = new URLSearchParams(search.toString());
-      next.delete("premium");
-      const q = next.toString();
-      router.replace(q ? `${pathname}?${q}` : pathname);
-      window.dispatchEvent(new Event("kilometrowka:plan"));
+      setMsg("Premium odblokowane lokalnie (tryb testowy, gość).");
     } else if (flag === "0" || flag === "free") {
       savePlan("free");
       setMsg("Przywrócono plan Free (tryb testowy).");
-      const next = new URLSearchParams(search.toString());
-      next.delete("premium");
-      const q = next.toString();
-      router.replace(q ? `${pathname}?${q}` : pathname);
-      window.dispatchEvent(new Event("kilometrowka:plan"));
     }
-  }, [search, router, pathname]);
+  }, [search, router, pathname, isSignedIn]);
 
   useEffect(() => {
     if (!msg) return;

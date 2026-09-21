@@ -123,3 +123,18 @@ export async function deleteTrip(
   `;
   return rows.length > 0;
 }
+
+/** Count trips in calendar month (YYYY-MM) for quota enforcement. */
+export async function countTripsInMonthDb(
+  clerkUserId: string,
+  monthKey: string,
+): Promise<number> {
+  const db = getDb();
+  const rows = await db`
+    SELECT COUNT(*)::int AS c
+    FROM trips
+    WHERE clerk_user_id = ${clerkUserId}
+      AND to_char(trip_date, 'YYYY-MM') = ${monthKey}
+  `;
+  return Number((rows[0] as { c: number } | undefined)?.c ?? 0);
+}
