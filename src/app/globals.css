@@ -14,3 +14,27 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* Clear focus for keyboard users without fighting component rings */
+:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+summary:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Restore Tailwind sr-only utility companion used by skip link */
+.focus\:not-sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: inherit;
+  margin: inherit;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
