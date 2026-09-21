@@ -35,6 +35,15 @@ export default function SuccessClient() {
         if (res.ok && data.paid) {
           savePlan("premium");
           window.dispatchEvent(new Event("kilometrowka:plan"));
+          try {
+            await fetch("/api/premium/activate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ session_id: sessionId }),
+            });
+          } catch {
+            /* local plan already set; cloud sync best-effort */
+          }
           setEmail(data.customerEmail || null);
           setStatus("paid");
           return;
@@ -83,10 +92,7 @@ export default function SuccessClient() {
               (<span className="font-medium">{email}</span>)
             </>
           ) : null}
-          . Masz nielimitowane przejazdy, Excel i diety w{" "}
-          <strong>tej przeglądarce</strong> (localStorage). Eksportuj kopie na
-          własny użytek — nie synchronizujemy między urządzeniami.
-        </p>
+          . Masz nielimitowane przejazdy, Excel i diety. Przy zalogowanym koncie plan Premium jest w chmurze i działa na wszystkich urządzeniach. </p>
         <Link
           href="/kalkulator"
           className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"

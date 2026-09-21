@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { SignInButton, useAuth } from "@clerk/nextjs";
 import WaitlistForm from "@/components/WaitlistForm";
 import {
   getCheckoutUrl,
@@ -13,6 +14,7 @@ type Interval = "month" | "year";
 type Mode = "loading" | "stripe" | "legacy" | "waitlist";
 
 export default function CheckoutButton() {
+  const { isLoaded, isSignedIn } = useAuth();
   const [mode, setMode] = useState<Mode>("loading");
   const [interval, setInterval] = useState<Interval>("year");
   const [busy, setBusy] = useState(false);
@@ -47,6 +49,10 @@ export default function CheckoutButton() {
   }, []);
 
   const startCheckout = useCallback(async () => {
+    if (!isSignedIn) {
+      setError("Zaloguj się, aby kupić Premium (konto synchronizuje plan między urządzeniami).");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -61,7 +67,9 @@ export default function CheckoutButton() {
         code?: string;
       };
       if (!res.ok || !data.url) {
-        if (data.code === "not_configured") {
+        if (data.code === "auth_required") {
+          setError("Zaloguj się, aby kontynuować płatność.");
+        } else if (data.code === "not_configured") {
           setMode("waitlist");
           setShowWaitlist(true);
           setError(
@@ -78,7 +86,7 @@ export default function CheckoutButton() {
     } finally {
       setBusy(false);
     }
-  }, [interval]);
+  }, [interval, isSignedIn]);
 
   if (mode === "loading") {
     return (
@@ -148,6 +156,24 @@ export default function CheckoutButton() {
 
   const yearlySelected = interval === "year";
 
+  if (isLoaded && !isSignedIn) {
+    return (
+      <div className="flex w-full max-w-md flex-col gap-3">
+        <p className="text-sm text-slate-600">
+          Aby kupić Premium i mieć plan na wszystkich urządzeniach, zaloguj się.
+        </p>
+        <SignInButton mode="modal">
+          <button
+            type="button"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            Zaloguj się, żeby kupić
+          </button>
+        </SignInButton>
+      </div>
+    );
+  }
+
   return (
     <div className="flex w-full flex-col gap-4 sm:max-w-md">
       <div
@@ -211,8 +237,8 @@ export default function CheckoutButton() {
       )}
 
       <p className="text-xs leading-relaxed text-slate-500">
-        Bezpieczna płatność Stripe Checkout. Po opłaceniu Premium zapisze się w
-        tej przeglądarce.{" "}
+        Bezpieczna płatność Stripe Checkout. Po opłaceniu Premium zapisze się na
+        Twoim koncie (sync między urządzeniami).{" "}
         <Link
           href="/regulamin"
           className="underline underline-offset-2 hover:text-slate-700"
