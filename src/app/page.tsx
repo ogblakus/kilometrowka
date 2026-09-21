@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Disclaimer from "@/components/Disclaimer";
+import FaqSection from "@/components/FaqSection";
 import PricingSection from "@/components/PricingSection";
 import {
   KILOMETROWKA_YEAR,
@@ -46,7 +47,7 @@ export default function HomePage() {
   return (
     <>
       <section className="border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white">
-        <div className="mx-auto max-w-5xl px-4 py-16 sm:py-20">
+        <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
           <p className="text-sm font-medium text-slate-500">
             Stawki {KILOMETROWKA_YEAR} · Dz.U. 2023 poz. 5
           </p>
@@ -54,20 +55,23 @@ export default function HomePage() {
             Ewidencja kilometrówki bez Excela i bez konta
           </h1>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
-            Kilometrówka.app to prosty kalkulator i dziennik przejazdów po
-            polsku: stawki za km, diety krajowe, eksport CSV i Excel. Dane
-            zostają w Twojej przeglądarce.
+            Prosty kalkulator i dziennik przejazdów po polsku: stawki za km,
+            diety krajowe, eksport CSV i Excel. Dane zostają w Twojej
+            przeglądarce.
+          </p>
+          <p className="mt-3 text-sm font-medium text-slate-700">
+            MVP dla JDG i pracowników — uczciwie, bez marketingowych bajerów.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/kalkulator"
-              className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             >
               Otwórz kalkulator
             </Link>
             <a
               href="#cennik"
-              className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             >
               Zobacz cennik
             </a>
@@ -96,7 +100,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="dla-kogo" className="scroll-mt-20 py-16">
+      <section id="dla-kogo" className="scroll-mt-20 py-14 sm:py-16">
         <div className="mx-auto max-w-5xl px-4">
           <h2 className="text-2xl font-bold text-slate-900">Dla kogo</h2>
           <p className="mt-2 max-w-2xl text-slate-600">
@@ -119,7 +123,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="jak-dziala" className="border-y border-slate-200 bg-slate-50 py-16">
+      <section
+        id="jak-dziala"
+        className="scroll-mt-20 border-y border-slate-200 bg-slate-50 py-14 sm:py-16"
+      >
         <div className="mx-auto max-w-5xl px-4">
           <h2 className="text-2xl font-bold text-slate-900">Jak to działa</h2>
           <ol className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -147,7 +154,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="py-16">
+      <section className="py-14 sm:py-16">
         <div className="mx-auto max-w-5xl px-4">
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="text-xl font-bold text-slate-900">
@@ -164,7 +171,7 @@ export default function HomePage() {
             </p>
             <Link
               href="/kup"
-              className="mt-4 inline-block text-sm font-medium text-slate-900 underline-offset-4 hover:underline"
+              className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-slate-900 underline-offset-4 hover:underline"
             >
               Odblokuj diety w Premium →
             </Link>
@@ -173,6 +180,8 @@ export default function HomePage() {
       </section>
 
       <PricingSection />
+
+      <FaqSection />
 
       <section className="py-12">
         <div className="mx-auto max-w-5xl px-4">
