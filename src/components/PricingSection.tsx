@@ -34,7 +34,7 @@ export default function PricingSection() {
             <button
               type="button"
               onClick={() => setYearly(false)}
-              className={`rounded-md px-3 py-1.5 font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+              className={`min-h-10 rounded-md px-3 py-2 font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                 !yearly
                   ? "bg-slate-900 text-white"
                   : "text-slate-600 hover:text-slate-900"
@@ -45,7 +45,7 @@ export default function PricingSection() {
             <button
               type="button"
               onClick={() => setYearly(true)}
-              className={`rounded-md px-3 py-1.5 font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+              className={`min-h-10 rounded-md px-3 py-2 font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
                 yearly
                   ? "bg-slate-900 text-white"
                   : "text-slate-600 hover:text-slate-900"
@@ -58,6 +58,7 @@ export default function PricingSection() {
         </div>
 
         <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          {/* Free */}
           <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-slate-500">Free</p>
             <p className="mt-1 text-3xl font-bold text-slate-900">0 zł</p>
@@ -71,12 +72,13 @@ export default function PricingSection() {
             </ul>
             <Link
               href="/kalkulator"
-              className="mt-6 inline-flex justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             >
               Korzystaj za darmo
             </Link>
           </div>
 
+          {/* Premium */}
           <div className="relative flex flex-col rounded-xl border-2 border-slate-900 bg-white p-6 shadow-md">
             <span className="absolute -top-3 left-4 rounded-full bg-slate-900 px-2.5 py-0.5 text-xs font-medium text-white">
               Polecane
@@ -101,12 +103,25 @@ export default function PricingSection() {
             </ul>
             <Link
               href="/kup"
-              className="mt-6 inline-flex justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             >
               Kup Premium
             </Link>
+            <p className="mt-3 text-center text-[11px] leading-relaxed text-slate-500">
+              <Link href="/regulamin" className="underline underline-offset-2 hover:text-slate-700">
+                Regulamin
+              </Link>
+              {" · "}
+              <Link
+                href="/polityka-prywatnosci"
+                className="underline underline-offset-2 hover:text-slate-700"
+              >
+                Polityka prywatności
+              </Link>
+            </p>
           </div>
 
+          {/* Dla firm */}
           <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-slate-500">Dla firm</p>
             <p className="mt-1 text-3xl font-bold text-slate-900">
@@ -124,7 +139,7 @@ export default function PricingSection() {
             </ul>
             <a
               href="mailto:kontakt@kilometrowka.app?subject=Kilometr%C3%B3wka.app%20%E2%80%94%20oferta%20dla%20firm"
-              className="mt-6 inline-flex justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+              className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             >
               Napisz do nas
             </a>
