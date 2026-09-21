@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
 } from "react";
-import Link from "next/link";
 import { useAuth } from "@clerk/nextjs";
 import CloudSyncBanners from "@/components/CloudSyncBanners";
 import Disclaimer from "@/components/Disclaimer";
@@ -19,6 +18,7 @@ import PaywallModal from "@/components/PaywallModal";
 import PremiumUnlock from "@/components/PremiumUnlock";
 import Toast from "@/components/Toast";
 import TripForm from "@/components/TripForm";
+import KalkulatorHeader from "@/components/KalkulatorHeader";
 import TripList from "@/components/TripList";
 import {
   deleteCloudTrip,
@@ -29,7 +29,6 @@ import {
 } from "@/lib/cloudTrips";
 import { formatMonthLabel } from "@/lib/format";
 import {
-  FREE_TRIPS_PER_MONTH,
   canAddTrip,
   canExportExcel,
   canUseDieta,
@@ -39,7 +38,6 @@ import {
   savePlan,
   type Plan,
 } from "@/lib/plan";
-import { KILOMETROWKA_YEAR, VEHICLE_RATES } from "@/lib/rates";
 import { loadTrips, saveTrips } from "@/lib/storage";
 import type { Trip } from "@/lib/types";
 
@@ -142,7 +140,6 @@ export default function CalculatorApp() {
   const addBlocked = !canAddTrip(plan, trips);
   const excelOk = canExportExcel(plan);
   const dietaOk = canUseDieta(plan);
-  const isPremium = plan === "premium";
 
   async function handleSave(data: Omit<Trip, "id"> & { id?: string }) {
     if (data.id) {
@@ -261,62 +258,11 @@ export default function CalculatorApp() {
         onDismissImport={dismissImport}
       />
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-              Ewidencja kilometrówki
-            </h1>
-            {isPremium && (
-              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                Premium aktywne
-              </span>
-            )}
-          </div>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            Stawki {KILOMETROWKA_YEAR}: auto ≤900 cm³{" "}
-            {VEHICLE_RATES.samochod_do_900.rate.toFixed(2).replace(".", ",")}{" "}
-            zł/km · auto &gt;900 cm³{" "}
-            {VEHICLE_RATES.samochod_ponad_900.rate
-              .toFixed(2)
-              .replace(".", ",")}{" "}
-            zł/km · motocykl{" "}
-            {VEHICLE_RATES.motocykl.rate.toFixed(2).replace(".", ",")} zł/km ·
-            motorower{" "}
-            {VEHICLE_RATES.motorower.rate.toFixed(2).replace(".", ",")} zł/km
-            (Dz.U. 2023 poz. 5).{" "}
-            {cloudMode
-              ? "Dane w chmurze (konto Clerk + Neon)."
-              : "Tryb gościa: dane w localStorage tej przeglądarki."}
-          </p>
-        </div>
-        <div
-          className={`rounded-lg border px-3 py-2 text-sm shadow-sm ${
-            isPremium
-              ? "border-emerald-200 bg-emerald-50"
-              : "border-slate-200 bg-white"
-          }`}
-        >
-          <span className="text-slate-500">Plan: </span>
-          <strong className={isPremium ? "text-emerald-900" : "text-slate-900"}>
-            {isPremium ? "Premium" : "Free"}
-          </strong>
-          {!isPremium && (
-            <>
-              <span className="text-slate-400"> · </span>
-              <span className="text-slate-600">
-                {tripsThisMonth}/{FREE_TRIPS_PER_MONTH} w tym miesiącu
-              </span>
-              <Link
-                href="/kup"
-                className="ml-2 rounded font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
-              >
-                Upgrade
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
+      <KalkulatorHeader
+        plan={plan}
+        tripsThisMonth={tripsThisMonth}
+        cloudMode={cloudMode}
+      />
 
       <Disclaimer compact />
 
