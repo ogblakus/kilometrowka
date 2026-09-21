@@ -8,12 +8,18 @@ export const PREMIUM_PRICE_YEARLY = 279; // ~20% off vs 29×12
 
 const PLAN_KEY = "kilometrowka.app.plan.v1";
 
+/**
+ * Guest-only local plan cache.
+ * Signed-in users must use plan from Neon via GET /api/me — never treat
+ * localStorage as authoritative entitlement.
+ */
 export function loadPlan(): Plan {
   if (typeof window === "undefined") return "free";
   const raw = localStorage.getItem(PLAN_KEY);
   return raw === "premium" ? "premium" : "free";
 }
 
+/** Persist guest plan (or cache of server plan). Dispatches kilometrowka:plan. */
 export function savePlan(plan: Plan): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(PLAN_KEY, plan);
