@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Disclaimer from "@/components/Disclaimer";
-import DietaCalculator from "@/components/DietaCalculator";
+import DietaPremiumGate from "@/components/DietaPremiumGate";
 import ExportButtons from "@/components/ExportButtons";
 import MonthlyTotals from "@/components/MonthlyTotals";
 import PaywallModal from "@/components/PaywallModal";
@@ -72,6 +72,7 @@ export default function CalculatorApp() {
   const addBlocked = !canAddTrip(plan, trips);
   const excelOk = canExportExcel(plan);
   const dietaOk = canUseDieta(plan);
+  const isPremium = plan === "premium";
 
   function handleSave(data: Omit<Trip, "id"> & { id?: string }) {
     if (data.id) {
@@ -108,17 +109,24 @@ export default function CalculatorApp() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 sm:py-8">
       <Suspense fallback={null}>
         <PremiumUnlock />
       </Suspense>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Ewidencja kilometrówki
-          </h1>
-          <p className="mt-2 text-sm text-slate-600">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              Ewidencja kilometrówki
+            </h1>
+            {isPremium && (
+              <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                Premium aktywne
+              </span>
+            )}
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">
             Stawki {KILOMETROWKA_YEAR}: auto ≤900 cm³{" "}
             {VEHICLE_RATES.samochod_do_900.rate.toFixed(2).replace(".", ",")}{" "}
             zł/km · auto &gt;900 cm³{" "}
@@ -132,12 +140,18 @@ export default function CalculatorApp() {
             (Dz.U. 2023 poz. 5). Dane w localStorage tej przeglądarki.
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm">
+        <div
+          className={`rounded-lg border px-3 py-2 text-sm shadow-sm ${
+            isPremium
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-slate-200 bg-white"
+          }`}
+        >
           <span className="text-slate-500">Plan: </span>
-          <strong className="text-slate-900">
-            {plan === "premium" ? "Premium" : "Free"}
+          <strong className={isPremium ? "text-emerald-900" : "text-slate-900"}>
+            {isPremium ? "Premium" : "Free"}
           </strong>
-          {plan === "free" && (
+          {!isPremium && (
             <>
               <span className="text-slate-400"> · </span>
               <span className="text-slate-600">
@@ -145,7 +159,7 @@ export default function CalculatorApp() {
               </span>
               <Link
                 href="/kup"
-                className="ml-2 font-medium text-slate-900 underline-offset-2 hover:underline"
+                className="ml-2 font-medium text-slate-900 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
               >
                 Upgrade
               </Link>
@@ -164,7 +178,7 @@ export default function CalculatorApp() {
         onBlocked={() => setPaywall("trips")}
       />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-base font-semibold text-slate-900">
             Lista przejazdów
@@ -174,7 +188,7 @@ export default function CalculatorApp() {
             <select
               value={monthFilter}
               onChange={(e) => setMonthFilter(e.target.value)}
-              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-slate-400"
+              className="min-h-10 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-400"
               aria-label="Filtr miesiąca"
             >
               <option value="">Wszystkie</option>
@@ -202,41 +216,10 @@ export default function CalculatorApp() {
 
       <MonthlyTotals trips={filteredTrips} />
 
-      {dietaOk ? (
-        <DietaCalculator />
-      ) : (
-        <section className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="pointer-events-none select-none opacity-40 blur-[1px]">
-            <DietaCalculator />
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center bg-white/70 p-4 backdrop-blur-[2px]">
-            <div className="max-w-sm rounded-xl border border-slate-200 bg-white p-5 text-center shadow-sm">
-              <p className="font-semibold text-slate-900">
-                Diety krajowe — Premium
-              </p>
-              <p className="mt-1 text-sm text-slate-600">
-                Kalkulator diet (45 zł/doba, ryczałty) jest dostępny w planie
-                Premium.
-              </p>
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                <Link
-                  href="/kup"
-                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-                >
-                  Odblokuj
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setPaywall("dieta")}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                >
-                  Więcej info
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
+      <DietaPremiumGate
+        unlocked={dietaOk}
+        onMoreInfo={() => setPaywall("dieta")}
+      />
 
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
       {paywall && (
