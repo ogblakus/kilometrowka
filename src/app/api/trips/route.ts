@@ -1,54 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAuthUser } from "@/lib/auth-api";
-import { createTrip, listTrips, type TripInput } from "@/lib/trips-db";
-import type { VehicleType } from "@/lib/types";
-
-const VEHICLES = new Set<VehicleType>([
-  "samochod_do_900",
-  "samochod_ponad_900",
-  "motocykl",
-  "motorower",
-]);
-
-function parseTripBody(body: unknown): TripInput | { error: string } {
-  if (!body || typeof body !== "object") {
-    return { error: "Nieprawidłowy JSON." };
-  }
-  const b = body as Record<string, unknown>;
-  const date = typeof b.date === "string" ? b.date.trim() : "";
-  const from = typeof b.from === "string" ? b.from.trim() : "";
-  const to = typeof b.to === "string" ? b.to.trim() : "";
-  const purpose = typeof b.purpose === "string" ? b.purpose.trim() : "";
-  const vehicle = b.vehicle as VehicleType;
-  const km = typeof b.km === "number" ? b.km : Number(b.km);
-  const amount = typeof b.amount === "number" ? b.amount : Number(b.amount);
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return { error: "Nieprawidłowa data." };
-  }
-  if (!from || !to) {
-    return { error: "Wymagane pola from i to." };
-  }
-  if (!Number.isFinite(km) || km <= 0) {
-    return { error: "Nieprawidłowe km." };
-  }
-  if (!Number.isFinite(amount) || amount < 0) {
-    return { error: "Nieprawidłowa kwota." };
-  }
-  if (!VEHICLES.has(vehicle)) {
-    return { error: "Nieprawidłowy pojazd." };
-  }
-
-  return {
-    date,
-    from,
-    to,
-    km,
-    purpose: purpose || "—",
-    vehicle,
-    amount,
-  };
-}
+import { currentMonthKey, FREE_TRIPS_PER_MONTH } from "@/lib/plan";
+import { parseAndValidateTripBody } from "@/lib/trip-validate";
+import {
+  countTripsInMonthDb,
+  createTrip,
+  listTrips,
+} from "@/lib/trips-db";
 
 export async function GET() {
   const authResult = await requireAuthUser();
@@ -87,9 +45,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nieprawidłowy JSON." }, { status: 400 });
   }
 
-  const parsed = parseTripBody(body);
+  const parsed = parseAndValidateTripBody(body);
   if ("error" in parsed) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
+  }
+
+  // Plan from Neon DB (Clerk user id) — never trust client body/query for entitlement
+  const plan = authResult.dbUser.plan === "premium" ? "premium" : "free";
+  if (plan !== "premium") {
+    const monthKey = currentMonthKey();
+    const used = await countTripsInMonthDb(authResult.userId, monthKey);
+    if (used >= FREE_TRIPS_PER_MONTH) {
+      return NextResponse.json(
+        {
+          error: `Limit Free: ${FREE_TRIPS_PER_MONTH} przejazdów / miesiąc. Wykup Premium.`,
+          code: "TRIP_QUOTA",
+        },
+        { status: 403 },
+      );
+    }
   }
 
   const id =
