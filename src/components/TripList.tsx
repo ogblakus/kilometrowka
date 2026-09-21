@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { VEHICLE_RATES } from "@/lib/rates";
 import { formatDatePl, formatKm, formatZl } from "@/lib/format";
 import type { Trip } from "@/lib/types";
@@ -24,12 +25,20 @@ export default function TripList({
   if (trips.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-12 text-center">
-        <p className="text-base font-medium text-slate-800">
-          Brak przejazdów
-        </p>
+        <p className="text-base font-medium text-slate-800">Brak przejazdów</p>
         <p className="mt-1 text-sm text-slate-500">
           Dodaj pierwszy wpis formularzem powyżej — kwota policzy się sama ze
           stawek 2026.
+        </p>
+        <p className="mt-4 text-xs text-slate-500">
+          Na Free masz limit miesięczny.{" "}
+          <Link
+            href="/kup"
+            className="font-medium text-slate-800 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
+          >
+            Zobacz Premium
+          </Link>{" "}
+          (Excel, diety, bez limitu).
         </p>
       </div>
     );
@@ -69,14 +78,14 @@ export default function TripList({
               <button
                 type="button"
                 onClick={() => onEdit(t)}
-                className="rounded-md border border-slate-200 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                className="inline-flex min-h-10 min-w-[4.5rem] items-center justify-center rounded-md border border-slate-200 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
               >
                 Edytuj
               </button>
               <button
                 type="button"
                 onClick={() => onDelete(t.id)}
-                className="rounded-md border border-red-200 px-2.5 py-1 text-xs text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
+                className="inline-flex min-h-10 min-w-[4.5rem] items-center justify-center rounded-md border border-red-200 px-3 py-2 text-xs text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300"
               >
                 Usuń
               </button>
