@@ -40,9 +40,7 @@ export default function SuccessClient() {
           return;
         }
 
-        // Sesja niepotwierdzona — nie udajemy płatności
         if (res.status === 503) {
-          // Stripe nie skonfigurowany lokalnie — i tak nie odblokowujemy
           setStatus("error");
           return;
         }
@@ -64,7 +62,7 @@ export default function SuccessClient() {
           Weryfikacja płatności…
         </h1>
         <p className="mt-3 text-sm text-slate-600">
-          Sprawdzamy sesję Stripe. To potrwa chwilę.
+          Potwierdzamy płatność. To potrwa chwilę.
         </p>
       </div>
     );
@@ -73,7 +71,7 @@ export default function SuccessClient() {
   if (status === "paid") {
     return (
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-8 text-center shadow-sm">
-        <p className="text-sm font-medium text-emerald-800">Sukces</p>
+        <p className="text-sm font-medium text-emerald-800">Gotowe</p>
         <h1 className="mt-2 text-2xl font-bold text-slate-900">
           Premium odblokowane
         </h1>
@@ -85,12 +83,13 @@ export default function SuccessClient() {
               (<span className="font-medium">{email}</span>)
             </>
           ) : null}
-          . Plan Premium zapisaliśmy w tej przeglądarce (localStorage). Możesz
-          korzystać z nielimitowanych przejazdów, Excel i diet.
+          . Masz nielimitowane przejazdy, Excel i diety w{" "}
+          <strong>tej przeglądarce</strong> (localStorage). Eksportuj kopie na
+          własny użytek — nie synchronizujemy między urządzeniami.
         </p>
         <Link
           href="/kalkulator"
-          className="mt-6 inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
         >
           Przejdź do kalkulatora
         </Link>
@@ -101,21 +100,21 @@ export default function SuccessClient() {
   if (status === "no_session") {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <h1 className="text-2xl font-bold text-slate-900">Brak sesji</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Brak sesji płatności</h1>
         <p className="mt-3 text-sm text-slate-600">
-          Nie znaleziono parametru sesji Stripe. Jeśli właśnie zapłaciłeś,
-          wróć z linku sukcesu z checkoutu albo skontaktuj się z nami.
+          Nie znaleziono potwierdzenia płatności. Jeśli właśnie zapłaciłeś,
+          wróć z linku sukcesu z checkoutu albo napisz na kontakt@kilometrowka.app.
         </p>
         <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/kup"
-            className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
           >
             Wróć do Kup Premium
           </Link>
           <Link
             href="/kalkulator"
-            className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
           >
             Kalkulator
           </Link>
@@ -131,19 +130,19 @@ export default function SuccessClient() {
       </h1>
       <p className="mt-3 text-sm text-slate-700">
         {status === "unpaid"
-          ? "Sesja Stripe nie ma statusu opłaconej. Premium nie zostało odblokowane — nie udajemy płatności."
-          : "Nie udało się zweryfikować sesji (błąd sieci lub konfiguracji). Premium nie zostało odblokowane."}
+          ? "Płatność nie została potwierdzona. Premium nie zostało odblokowane."
+          : "Nie udało się zweryfikować płatności. Premium nie zostało odblokowane — spróbuj ponownie lub napisz do nas."}
       </p>
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link
           href="/kup"
-          className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
         >
           Spróbuj ponownie
         </Link>
         <Link
           href="/kalkulator"
-          className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50"
         >
           Kalkulator
         </Link>
