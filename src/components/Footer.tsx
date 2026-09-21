@@ -35,6 +35,14 @@ export default function Footer() {
               </li>
               <li>
                 <Link
+                  href="/#faq"
+                  className="hover:text-slate-900 focus:outline-none focus-visible:underline"
+                >
+                  FAQ
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/kup"
                   className="hover:text-slate-900 focus:outline-none focus-visible:underline"
                 >
