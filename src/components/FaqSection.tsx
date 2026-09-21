@@ -7,19 +7,19 @@ const faq = [
   },
   {
     q: "Gdzie są moje dane?",
-    a: "Ewidencja przejazdów i status planu zapisują się w localStorage Twojej przeglądarki. Nie prowadzimy konta ani centralnej bazy przejazdów. Czyszczenie przeglądarki lub inna przeglądarka = brak tych danych — warto eksportować CSV/Excel.",
+    a: "Po zalogowaniu (Clerk) ewidencja i plan synchronizują się w chmurze (Neon) między urządzeniami. Bez logowania dane zostają tylko w localStorage tej przeglądarki (tryb gościa) — warto eksportować CSV/Excel.",
   },
   {
     q: "Czym różni się Free od Premium?",
-    a: `Free: do ${FREE_TRIPS_PER_MONTH} przejazdów na miesiąc i eksport CSV. Premium: nielimitowane przejazdy, Excel (.xlsx), kalkulator diet krajowych, bez reklam. Dane nadal lokalnie.`,
+    a: `Free: do ${FREE_TRIPS_PER_MONTH} przejazdów na miesiąc i eksport CSV. Premium: nielimitowane przejazdy, Excel (.xlsx), kalkulator diet krajowych, bez reklam. Po zalogowaniu dane w chmurze; gość = localStorage.`,
   },
   {
     q: "Jak działa płatność?",
-    a: "Kupujesz Premium przez Stripe Checkout (karta). Po opłaceniu wracasz na stronę sukcesu — plan Premium zapisuje się w tej przeglądarce. Szczegóły: regulamin i polityka prywatności.",
+    a: "Kupujesz Premium przez Stripe Checkout (karta) — wymagane logowanie. Po opłaceniu wracasz na stronę sukcesu — plan Premium zapisuje się na koncie (Neon) i działa na wszystkich urządzeniach. Szczegóły: regulamin i polityka prywatności.",
   },
   {
     q: "Co po zakupie?",
-    a: "Od razu odblokujesz Excel, diety i nielimitowaną ewidencję w tej przeglądarce. Subskrypcja miesięczna lub roczna jest obsługiwana przez Stripe; Premium lokalne nie synchronizuje się między urządzeniami.",
+    a: "Od razu odblokujesz Excel, diety i nielimitowaną ewidencję. Subskrypcja Stripe; przy zalogowanym koncie plan Premium zapisuje się w bazie i działa na wszystkich urządzeniach. Zakup wymaga logowania.",
   },
 ];
 
