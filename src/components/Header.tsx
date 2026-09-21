@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
+import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 
 const links = [
   { href: "/", label: "Start" },
@@ -13,6 +14,7 @@ const links = [
 ];
 
 export default function Header() {
+  const { isSignedIn } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const menuId = useId();
@@ -83,39 +85,49 @@ export default function Header() {
           >
             Otwórz ewidencję
           </Link>
+          <div className="ml-2 flex items-center gap-2">
+            {!isSignedIn ? (
+              <SignInButton mode="modal">
+                <button
+                  type="button"
+                  className="inline-flex min-h-10 items-center rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+                >
+                  Zaloguj się
+                </button>
+              </SignInButton>
+            ) : (
+              <UserButton
+                appearance={{
+                  elements: { avatarBox: "h-9 w-9" },
+                }}
+              />
+            )}
+          </div>
         </nav>
 
-        <button
-          type="button"
-          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 md:hidden"
-          aria-label={open ? "Zamknij menu" : "Otwórz menu"}
-          aria-expanded={open}
-          aria-controls={menuId}
-          onClick={() => setOpen((v) => !v)}
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden
+        <div className="flex items-center gap-2 md:hidden">
+          {isSignedIn ? <UserButton /> : null}
+          <button
+            type="button"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-slate-200 p-2 text-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+            aria-label={open ? "Zamknij menu" : "Otwórz menu"}
+            aria-expanded={open}
+            aria-controls={menuId}
+            onClick={() => setOpen((v) => !v)}
           >
-            {open ? (
-              <path d="M6 6l12 12M6 18L18 6" />
-            ) : (
-              <path d="M4 7h16M4 12h16M4 17h16" />
-            )}
-          </svg>
-        </button>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              {open ? (
+                <path d="M6 6l12 12M6 18L18 6" />
+              ) : (
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              )}
+            </svg>
+          </button>
+        </div>
       </div>
 
       {open && (
-        <div
-          id={menuId}
-          className="border-t border-slate-100 bg-white px-4 py-3 md:hidden"
-        >
+        <div id={menuId} className="border-t border-slate-100 bg-white px-4 py-3 md:hidden">
           <nav className="flex flex-col gap-1" aria-label="Menu mobilne">
             {links.map((l) => (
               <Link
@@ -134,6 +146,17 @@ export default function Header() {
             >
               Otwórz ewidencję
             </Link>
+            {!isSignedIn ? (
+              <SignInButton mode="modal">
+                <button
+                  type="button"
+                  className="mt-1 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-300 px-3 py-3 text-sm font-medium text-slate-800"
+                  onClick={() => setOpen(false)}
+                >
+                  Zaloguj się, żeby synchronizować
+                </button>
+              </SignInButton>
+            ) : null}
           </nav>
         </div>
       )}
