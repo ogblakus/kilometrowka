@@ -1,1 +1,1 @@
-LOAD_FROM_/tmp/CalculatorApp.tsx
+file:///tmp/CalculatorApp.tsx
