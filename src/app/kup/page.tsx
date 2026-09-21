@@ -69,12 +69,15 @@ export default function KupPage() {
 
       <aside className="mt-10 rounded-lg border border-slate-200 bg-white p-4 text-xs leading-relaxed text-slate-500">
         <p>
-          <strong className="text-slate-700">Uwaga:</strong> przycisk „Zapłać”
-          otwiera zewnętrzny checkout (Lemon Squeezy lub Stripe Payment Link),
-          gdy administrator ustawi zmienną środowiskową. Do czasu podłączenia
-          płatności dostępna jest lista oczekujących. Odblokowanie Premium po
-          płatności będzie automatyczne (webhook) — na razie do testów możesz
-          użyć{" "}
+          <strong className="text-slate-700">Uwaga:</strong> płatności obsługuje{" "}
+          <strong className="text-slate-700">Stripe Checkout Sessions</strong>{" "}
+          (subskrypcja miesięczna lub roczna). Sekrety Stripe zostają wyłącznie
+          po stronie serwera — nigdy w przeglądarce. Gdy brak{" "}
+          <code className="rounded bg-slate-100 px-1">STRIPE_SECRET_KEY</code>{" "}
+          lub Price ID, pokazywana jest lista oczekujących zamiast udawania
+          płatności. Po udanej płatności wracasz na{" "}
+          <code className="rounded bg-slate-100 px-1">/kup/sukces</code> i
+          Premium zapisuje się w localStorage. Do testów bez Stripe:{" "}
           <code className="rounded bg-slate-100 px-1">/kalkulator?premium=1</code>
           .
         </p>
