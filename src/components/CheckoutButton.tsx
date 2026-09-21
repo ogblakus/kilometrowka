@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import WaitlistForm from "@/components/WaitlistForm";
 import {
   getCheckoutUrl,
@@ -64,7 +65,7 @@ export default function CheckoutButton() {
           setMode("waitlist");
           setShowWaitlist(true);
           setError(
-            "Płatności Stripe nie są jeszcze skonfigurowane. Możesz zapisać się na listę.",
+            "Płatność jest chwilowo niedostępna. Możesz zostawić e-mail — damy znać.",
           );
         } else {
           setError(data.error || "Nie udało się rozpocząć płatności.");
@@ -101,7 +102,7 @@ export default function CheckoutButton() {
         href={checkoutUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 sm:w-auto"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 sm:w-auto"
       >
         Zapłać
       </a>
@@ -121,26 +122,23 @@ export default function CheckoutButton() {
             <button
               type="button"
               onClick={() => setShowWaitlist(true)}
-              className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             >
-              Wkrótce — zapisz się
+              Zostaw e-mail
             </button>
             <p className="text-xs text-slate-500">
-              Stripe Checkout Sessions jeszcze nieaktywny (brak{" "}
-              <code className="rounded bg-slate-100 px-1">STRIPE_SECRET_KEY</code>{" "}
-              / Price ID w Vercel). Zostaw e-mail — zapiszemy go lokalnie w tej
-              przeglądarce.
+              Checkout jest chwilowo niedostępny. Zostaw e-mail — zapiszemy go
+              lokalnie w tej przeglądarce i damy znać, gdy płatność wróci.
             </p>
           </div>
         ) : (
           <>
             <p className="mb-2 text-sm text-slate-600">
-              Płatności uruchamiamy wkrótce — zostaw e-mail (zapis lokalny w tej
-              przeglądarce):
+              Zostaw e-mail (zapis lokalny w tej przeglądarce):
             </p>
             <WaitlistForm
-              buttonLabel="Zapisz na listę"
-              successMessage="Świetnie! Zapisaliśmy e-mail lokalnie. Po aktywacji płatności odblokujesz Premium."
+              buttonLabel="Zapisz kontakt"
+              successMessage="Dzięki! Zapisaliśmy e-mail lokalnie. Dam znać, gdy płatność będzie znów dostępna."
             />
           </>
         )}
@@ -148,34 +146,52 @@ export default function CheckoutButton() {
     );
   }
 
+  const yearlySelected = interval === "year";
+
   return (
     <div className="flex w-full flex-col gap-4 sm:max-w-md">
       <div
-        className="inline-flex rounded-lg border border-slate-300 bg-white p-1 text-sm"
+        className="grid grid-cols-2 gap-1 rounded-xl border border-slate-300 bg-white p-1 text-sm"
         role="group"
         aria-label="Okres subskrypcji"
       >
         <button
           type="button"
           onClick={() => setInterval("month")}
-          className={`flex-1 rounded-md px-3 py-2 font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
-            interval === "month"
-              ? "bg-slate-900 text-white"
-              : "text-slate-600 hover:text-slate-900"
+          aria-pressed={!yearlySelected}
+          className={`min-h-12 rounded-lg px-3 py-2.5 font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+            !yearlySelected
+              ? "bg-slate-900 text-white shadow-sm"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
           }`}
         >
-          {PREMIUM_PRICE_MONTHLY} zł/mies
+          <span className="block">{PREMIUM_PRICE_MONTHLY} zł</span>
+          <span
+            className={`block text-xs font-normal ${
+              !yearlySelected ? "text-slate-300" : "text-slate-400"
+            }`}
+          >
+            / miesiąc
+          </span>
         </button>
         <button
           type="button"
           onClick={() => setInterval("year")}
-          className={`flex-1 rounded-md px-3 py-2 font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
-            interval === "year"
-              ? "bg-slate-900 text-white"
-              : "text-slate-600 hover:text-slate-900"
+          aria-pressed={yearlySelected}
+          className={`relative min-h-12 rounded-lg px-3 py-2.5 font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+            yearlySelected
+              ? "bg-slate-900 text-white shadow-sm"
+              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
           }`}
         >
-          {PREMIUM_PRICE_YEARLY} zł/rok (−20%)
+          <span className="block">{PREMIUM_PRICE_YEARLY} zł</span>
+          <span
+            className={`block text-xs font-normal ${
+              yearlySelected ? "text-slate-300" : "text-slate-400"
+            }`}
+          >
+            / rok (−20%)
+          </span>
         </button>
       </div>
 
@@ -183,7 +199,7 @@ export default function CheckoutButton() {
         type="button"
         disabled={busy}
         onClick={startCheckout}
-        className="inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {busy ? "Przekierowanie…" : "Zapłać przez Stripe"}
       </button>
@@ -194,9 +210,22 @@ export default function CheckoutButton() {
         </p>
       )}
 
-      <p className="text-xs text-slate-500">
-        Bezpieczna płatność Stripe Checkout (subskrypcja). Po opłaceniu wrócisz
-        na stronę sukcesu i odblokujesz Premium lokalnie.
+      <p className="text-xs leading-relaxed text-slate-500">
+        Bezpieczna płatność Stripe Checkout. Po opłaceniu Premium zapisze się w
+        tej przeglądarce.{" "}
+        <Link
+          href="/regulamin"
+          className="underline underline-offset-2 hover:text-slate-700"
+        >
+          Regulamin
+        </Link>
+        {" · "}
+        <Link
+          href="/polityka-prywatnosci"
+          className="underline underline-offset-2 hover:text-slate-700"
+        >
+          Polityka
+        </Link>
       </p>
     </div>
   );
