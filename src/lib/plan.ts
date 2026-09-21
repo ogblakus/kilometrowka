@@ -17,6 +17,12 @@ export function loadPlan(): Plan {
 export function savePlan(plan: Plan): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(PLAN_KEY, plan);
+  window.dispatchEvent(new Event("kilometrowka:plan"));
+}
+
+/** Reset guest/local plan (e.g. after sign-out — Premium lives on the account). */
+export function clearLocalPlan(): void {
+  savePlan("free");
 }
 
 /** Current calendar month key in Europe/Warsaw (YYYY-MM). */
