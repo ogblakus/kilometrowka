@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import {
   getPriceId,
   getStripe,
@@ -38,6 +39,17 @@ export async function POST(request: Request) {
         code: "not_configured",
       },
       { status: 503 },
+    );
+  }
+
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json(
+      {
+        error: "Zaloguj się, aby kupić Premium.",
+        code: "auth_required",
+      },
+      { status: 401 },
     );
   }
 
@@ -88,6 +100,7 @@ export async function POST(request: Request) {
       cancel_url: `${site}/kup`,
       locale: "pl",
       allow_promotion_codes: true,
+      client_reference_id: userId,
     });
 
     if (!session.url) {
