@@ -12,7 +12,7 @@ export default function RegulaminPage() {
     <article className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="text-3xl font-bold text-slate-900">Regulamin</h1>
       <p className="mt-2 text-sm text-slate-500">
-        Ostatnia aktualizacja: 20 września 2026
+        Ostatnia aktualizacja: 21 września 2026
       </p>
 
       <div className="mt-8 space-y-6 text-sm leading-relaxed text-slate-700">
@@ -59,9 +59,10 @@ export default function RegulaminPage() {
           <p className="mt-2">
             Plan Free ma limity (m.in. liczba przejazdów w miesiącu, brak
             eksportu Excel i diet). Plan Premium odblokowuje dodatkowe funkcje.
-            Płatności — gdy aktywne — realizuje zewnętrzny operator (Lemon
-            Squeezy / Stripe). Do czasu uruchomienia checkoutu możesz zapisać się
-            na listę oczekujących. Oferta „Dla firm” jest ustalana indywidualnie.
+            Płatności Premium realizuje Stripe Checkout (subskrypcja miesięczna
+            lub roczna). Po opłaceniu Premium zapisuje się lokalnie w przeglądarce
+            użytkownika (localStorage). Oferta „Dla firm” jest ustalana
+            indywidualnie.
           </p>
         </section>
 
