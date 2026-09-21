@@ -9,7 +9,7 @@ Repo: https://github.com/ogblakus/kilometrowka
 
 ## Funkcje
 
-- **Landing** — hero, dla kogo, jak działa, cennik Free / Premium / Dla firm
+- **Landing** — hero, dla kogo, jak działa, FAQ, cennik Free / Premium / Dla firm
 - **Kalkulator** — przejazdy, sumy miesięczne, filtr miesiąca, walidacja formularza
 - **Freemium** — Free: max 10 przejazdów/mies + CSV; Premium: nielimit + Excel + diety
 - **Eksport** — CSV (UTF-8 BOM, `;`) oraz Excel `.xlsx` (Premium)
@@ -27,7 +27,7 @@ Repo: https://github.com/ogblakus/kilometrowka
 | Excel | ✗ | ✓ | ✓ |
 | Diety | ✗ | ✓ | ✓ |
 
-Lokalny override testowy: `/kalkulator?premium=1` (lub `?premium=0` = Free).  
+**Ops-only** (nie pokazuj klientom): lokalny override `/kalkulator?premium=1` (lub `?premium=0` = Free).  
 Po prawdziwej płatności Stripe: redirect na `/kup/sukces?session_id=…` → weryfikacja API → `plan=premium` w localStorage.
 
 ## Stawki (2026)
