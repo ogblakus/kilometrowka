@@ -14,7 +14,7 @@ export default function PolitykaPage() {
         Polityka prywatności
       </h1>
       <p className="mt-2 text-sm text-slate-500">
-        Ostatnia aktualizacja: 20 września 2026
+        Ostatnia aktualizacja: 21 września 2026
       </p>
 
       <div className="mt-8 space-y-6 text-sm leading-relaxed text-slate-700">
@@ -70,9 +70,9 @@ export default function PolitykaPage() {
           <p className="mt-2">
             Dane ewidencji służą wyłącznie Tobie do prowadzenia dziennika
             przejazdów. Nie prowadzimy kont użytkowników ani centralnej bazy
-            przejazdów. Płatności (gdy aktywne) realizuje zewnętrzny operator
-            (Lemon Squeezy / Stripe) — wtedy obowiązuje ich polityka
-            prywatności.
+            przejazdów. Płatności Premium realizuje Stripe — wtedy obowiązuje
+            ich polityka prywatności oraz nasze zasady dotyczące localStorage
+            planu Premium.
           </p>
         </section>
 
