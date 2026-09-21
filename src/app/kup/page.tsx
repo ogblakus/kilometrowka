@@ -8,14 +8,14 @@ import {
 } from "@/lib/plan";
 
 export const metadata: Metadata = {
-  title: "Kup Premium — Kilometrówka.app",
+  title: "Kup Premium",
   description:
-    "Odblokuj nielimitowaną ewidencję, eksport Excel i kalkulator diet krajowych. 29 zł/mies lub 279 zł/rok.",
+    "Odblokuj nielimitowaną ewidencję, eksport Excel i kalkulator diet krajowych. 29 zł/mies lub 279 zł/rok. Płatność Stripe Checkout.",
 };
 
 export default function KupPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
+    <div className="mx-auto max-w-3xl px-4 py-10 sm:py-12">
       <p className="text-sm font-medium text-slate-500">Premium</p>
       <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
         Kup Premium
@@ -35,7 +35,7 @@ export default function KupPage() {
           </p>
         </div>
         <div className="rounded-xl border-2 border-slate-900 bg-white p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Rocznie (−20%)</p>
+          <p className="text-sm font-medium text-slate-900">Rocznie (−20%)</p>
           <p className="mt-1 text-2xl font-bold text-slate-900">
             {PREMIUM_PRICE_YEARLY} zł
             <span className="text-sm font-normal text-slate-500">/rok</span>
@@ -61,25 +61,37 @@ export default function KupPage() {
         <CheckoutButton />
         <Link
           href="/kalkulator"
-          className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
         >
           Wróć do kalkulatora
         </Link>
       </div>
 
+      <p className="mt-4 text-xs leading-relaxed text-slate-500">
+        Kupując, akceptujesz{" "}
+        <Link
+          href="/regulamin"
+          className="underline underline-offset-2 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
+        >
+          regulamin
+        </Link>{" "}
+        i{" "}
+        <Link
+          href="/polityka-prywatnosci"
+          className="underline underline-offset-2 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 rounded"
+        >
+          politykę prywatności
+        </Link>
+        .
+      </p>
+
       <aside className="mt-10 rounded-lg border border-slate-200 bg-white p-4 text-xs leading-relaxed text-slate-500">
         <p>
-          <strong className="text-slate-700">Uwaga:</strong> płatności obsługuje{" "}
-          <strong className="text-slate-700">Stripe Checkout Sessions</strong>{" "}
-          (subskrypcja miesięczna lub roczna). Sekrety Stripe zostają wyłącznie
-          po stronie serwera — nigdy w przeglądarce. Gdy brak{" "}
-          <code className="rounded bg-slate-100 px-1">STRIPE_SECRET_KEY</code>{" "}
-          lub Price ID, pokazywana jest lista oczekujących zamiast udawania
-          płatności. Po udanej płatności wracasz na{" "}
-          <code className="rounded bg-slate-100 px-1">/kup/sukces</code> i
-          Premium zapisuje się w localStorage. Do testów bez Stripe:{" "}
-          <code className="rounded bg-slate-100 px-1">/kalkulator?premium=1</code>
-          .
+          <strong className="text-slate-700">Jak to działa:</strong> płatność
+          przechodzi przez Stripe Checkout (subskrypcja miesięczna lub roczna).
+          Po udanej płatności Premium zapisuje się w tej przeglądarce
+          (localStorage) — bez konta i bez synchronizacji między urządzeniami.
+          Warto eksportować CSV/Excel na własny użytek.
         </p>
       </aside>
     </div>
