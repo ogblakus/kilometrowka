@@ -58,10 +58,8 @@ export function DietaDisclaimer() {
         </li>
       </ul>
       <p className="mt-1">
-        JDG: własne diety przedsiębiorcy są kosztem do limitu dla pracowników
-        (art. 23 ust. 1 pkt 52 ustawy o PIT). Ryczałty za nocleg i dojazdy
-        dotyczą pracowników — przedsiębiorca rozlicza faktyczne, udokumentowane
-        wydatki.
+        Według interpretacji podatkowych przedsiębiorca na JDG może wliczyć w
+        koszty własną dietę, ale nie ryczałt za nocleg ani za dojazdy.
       </p>
     </aside>
   );
