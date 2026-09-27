@@ -2,7 +2,7 @@
 
 Prosta ewidencja przejazdów i kalkulator **kilometrówki** oraz **diet krajowych** (Polska, stawki 2026).
 
-MVP: Next.js (App Router) + TypeScript + Tailwind. Dane w `localStorage` — bez konta i bez bazy.
+MVP: Next.js (App Router) + TypeScript + Tailwind. Goście: dane w `localStorage`. Zalogowani (Clerk): przejazdy i plan w Neon Postgres.
 
 Live: https://kilometrowka-nine.vercel.app  
 Repo: https://github.com/ogblakus/kilometrowka
@@ -73,10 +73,27 @@ npm run build && npm start
 | `STRIPE_SECRET_KEY` | `sk_live_…` / `sk_test_…` | **Tylko serwer** — nigdy `NEXT_PUBLIC_` |
 | `STRIPE_PRICE_ID_MONTHLY` | `price_…` | Cena miesięczna |
 | `STRIPE_PRICE_ID_YEARLY` | `price_…` | Cena roczna |
+| `STRIPE_PRODUCT_ID_PREMIUM` | `prod_…` | Produkt Premium — tylko on nadaje Premium |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_…` | Signing secret endpointu webhooka — **tylko serwer** |
+| `DATABASE_URL` | `postgresql://…` | Neon (tabele `users`, `trips`, `stripe_events`) |
 
-3. **Redeploy** po dodaniu env.
-4. Smoke: `/kup` → wybór mies/rok → „Zapłać przez Stripe” → Checkout → `/kup/sukces` → Premium w kalkulatorze.
-5. Bez powyższych zmiennych przycisk pokazuje **waitlistę** — nie udaje żywych płatności.
+3. **Webhook**: Stripe Dashboard → Developers → Webhooks → endpoint `https://<domena>/api/stripe/webhook`, zdarzenia `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` → skopiuj `whsec_…` do `STRIPE_WEBHOOK_SECRET`.
+4. **Redeploy** po dodaniu env.
+5. Smoke: `/kup` → wybór mies/rok → „Zapłać przez Stripe” → Checkout → `/kup/sukces` → Premium w kalkulatorze.
+6. Bez powyższych zmiennych przycisk pokazuje **waitlistę** — nie udaje żywych płatności.
+
+### Webhook i uprawnienia Premium
+
+- `POST /api/stripe/webhook` (runtime nodejs, publiczny — autoryzacja podpisem Stripe) jest **źródłem prawdy** dla `users.plan`.
+- Weryfikacja podpisu (`STRIPE_WEBHOOK_SECRET`) → 400 przy złym/brakującym podpisie. Deduplikacja po `event.id` w tabeli `stripe_events`. Błąd przetwarzania → 500 (Stripe ponowi).
+- Mapowanie na użytkownika: `client_reference_id` / `metadata.clerk_user_id` (ustawiane w `/api/checkout`, także na subskrypcji) → `stripe_customer_id` → `stripe_subscription_id`.
+- Premium tylko gdy produkt subskrypcji = `STRIPE_PRODUCT_ID_PREMIUM` i status `active`/`trialing`. `past_due` = plan bez zmian (Stripe ponawia płatność); `canceled`/`unpaid`/`incomplete_expired`/inne = `free`.
+- Zapisywane w `users`: `stripe_customer_id`, `stripe_subscription_id`, `subscription_status`, `current_period_end`.
+- `POST /api/premium/activate` to szybka ścieżka po powrocie z Checkout — weryfikuje sesję po stronie serwera (opłacona, należy do zalogowanego użytkownika Clerk, właściwy produkt, subskrypcja aktywna). Nigdy nie ufa klientowi.
+
+### Migracje bazy
+
+`database/migrations/*.sql` — idempotentne, uruchamiaj po kolei w Neon (SQL Editor lub `psql "$DATABASE_URL" -f …`).
 
 Opcjonalnie (legacy): `NEXT_PUBLIC_LEMON_CHECKOUT_URL` lub `NEXT_PUBLIC_STRIPE_PAYMENT_LINK` — używane tylko gdy Sessions nie są skonfigurowane.
 

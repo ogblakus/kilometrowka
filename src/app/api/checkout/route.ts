@@ -101,6 +101,9 @@ export async function POST(request: Request) {
       locale: "pl",
       allow_promotion_codes: true,
       client_reference_id: userId,
+      // Lets the webhook map Stripe objects back to the Clerk user.
+      metadata: { clerk_user_id: userId },
+      subscription_data: { metadata: { clerk_user_id: userId } },
     });
 
     if (!session.url) {
