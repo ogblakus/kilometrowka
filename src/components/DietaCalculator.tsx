@@ -9,6 +9,20 @@ import {
 } from "@/lib/rates";
 import { formatZl, todayIsoWarsaw } from "@/lib/format";
 import type { DietaInput } from "@/lib/types";
+import { DietaDisclaimer } from "@/components/Disclaimer";
+
+type MealKey = "breakfasts" | "lunches" | "dinners";
+
+const MEALS: { key: MealKey; label: string; hint: string }[] = [
+  { key: "breakfasts", label: "Śniadania", hint: "−25% diety" },
+  { key: "lunches", label: "Obiady", hint: "−50% diety" },
+  { key: "dinners", label: "Kolacje", hint: "−25% diety" },
+];
+
+function toMealCount(value: string): number {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
 
 export default function DietaCalculator() {
   const today = todayIsoWarsaw();
@@ -19,6 +33,9 @@ export default function DietaCalculator() {
     endTime: "18:00",
     includeNocleg: false,
     includeDojazdy: false,
+    breakfasts: 0,
+    lunches: 0,
+    dinners: 0,
   });
 
   const result = useMemo(() => calcDieta(input), [input]);
@@ -31,10 +48,10 @@ export default function DietaCalculator() {
             Kalkulator diety krajowej
           </h2>
           <p className="mt-1 text-xs text-slate-500">
-            Dieta {DIETA_DOBOWA} zł/doba · ryczałt nocleg{" "}
-            {DIETA_NOCLEG_RYCZALT.toFixed(2).replace(".", ",")} zł · dojazdy{" "}
-            {DIETA_DOJAZDY_RYCZALT.toFixed(2).replace(".", ",")} zł. Projekt 60
-            zł/doba nie jest obowiązującym prawem.
+            Dieta {DIETA_DOBOWA} zł/doba · ryczałt za nocleg{" "}
+            {DIETA_NOCLEG_RYCZALT.toFixed(2).replace(".", ",")} zł/noc · dojazdy{" "}
+            {DIETA_DOJAZDY_RYCZALT.toFixed(2).replace(".", ",")} zł/rozpoczęta
+            doba. Projekt 60 zł/doba nie jest obowiązującym prawem.
           </p>
         </div>
       </div>
@@ -86,30 +103,74 @@ export default function DietaCalculator() {
         </label>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-4 text-sm">
-        <label className="inline-flex items-center gap-2 text-slate-700">
+      <fieldset className="mt-4">
+        <legend className="text-sm text-slate-600">
+          Zapewnione bezpłatne posiłki (zmniejszają dietę)
+        </legend>
+        <div className="mt-1 grid grid-cols-3 gap-3">
+          {MEALS.map((meal) => (
+            <label key={meal.key} className="block text-sm">
+              <span className="text-slate-600">
+                {meal.label}{" "}
+                <span className="text-xs text-slate-400">({meal.hint})</span>
+              </span>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
+                value={input[meal.key] ?? 0}
+                onChange={(e) =>
+                  setInput((i) => ({
+                    ...i,
+                    [meal.key]: toMealCount(e.target.value),
+                  }))
+                }
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-400"
+              />
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <div className="mt-3 flex flex-col gap-2 text-sm">
+        <label className="inline-flex items-start gap-2 text-slate-700">
           <input
             type="checkbox"
             checked={input.includeNocleg}
             onChange={(e) =>
               setInput((i) => ({ ...i, includeNocleg: e.target.checked }))
             }
-            className="rounded border-slate-300"
+            className="mt-0.5 rounded border-slate-300"
           />
-          Ryczałt za nocleg ({DIETA_NOCLEG_RYCZALT.toFixed(2).replace(".", ",")}{" "}
-          zł)
+          <span>
+            Ryczałt za nocleg bez rachunku (
+            {DIETA_NOCLEG_RYCZALT.toFixed(2).replace(".", ",")} zł/noc)
+            <span className="block text-xs text-slate-500">
+              Za każdą noc, w której podróż obejmuje min. 6 h między 21:00 a
+              7:00. Nie przysługuje, gdy nocleg był zapewniony lub masz
+              rachunek.
+            </span>
+          </span>
         </label>
-        <label className="inline-flex items-center gap-2 text-slate-700">
+        <label className="inline-flex items-start gap-2 text-slate-700">
           <input
             type="checkbox"
             checked={input.includeDojazdy}
             onChange={(e) =>
               setInput((i) => ({ ...i, includeDojazdy: e.target.checked }))
             }
-            className="rounded border-slate-300"
+            className="mt-0.5 rounded border-slate-300"
           />
-          Ryczałt dojazdów ({DIETA_DOJAZDY_RYCZALT.toFixed(2).replace(".", ",")}{" "}
-          zł × 2)
+          <span>
+            Ryczałt na dojazdy komunikacją miejscową (
+            {DIETA_DOJAZDY_RYCZALT.toFixed(2).replace(".", ",")} zł/rozpoczęta
+            doba)
+            <span className="block text-xs text-slate-500">
+              Nie przysługuje, jeśli nie ponosisz tych kosztów (np. poruszasz
+              się własnym autem).
+            </span>
+          </span>
         </label>
       </div>
 
@@ -135,6 +196,10 @@ export default function DietaCalculator() {
           Sprawdź daty i godziny — koniec musi być później niż początek.
         </p>
       )}
+
+      <div className="mt-4">
+        <DietaDisclaimer />
+      </div>
     </section>
   );
 }

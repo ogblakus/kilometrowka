@@ -27,4 +27,10 @@ export interface DietaInput {
   endTime: string;
   includeNocleg: boolean;
   includeDojazdy: boolean;
+  /** Liczba zapewnionych bezpłatnych śniadań (każde −25% diety). */
+  breakfasts?: number;
+  /** Liczba zapewnionych bezpłatnych obiadów (każdy −50% diety). */
+  lunches?: number;
+  /** Liczba zapewnionych bezpłatnych kolacji (każda −25% diety). */
+  dinners?: number;
 }

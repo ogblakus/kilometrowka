@@ -43,8 +43,19 @@ Po prawdziwej płatności Stripe: redirect na `/kup/sukces?session_id=…` → w
 
 ### Diety krajowe
 
-- Dieta: **45 zł/doba** (projekt 60 zł **nie jest prawem**)
-- < 8 h: 0 · 8–12 h: 50% · > 12 h: 100%
+- Podstawa: rozporządzenie MPiPS z 29.01.2013 (t.j. Dz.U. 2023 poz. 2190), §§ 7–9
+- Dieta: **45 zł/doba** (od 1.01.2023; projekt 60 zł **nie jest prawem**)
+- Podróż ≤ 24 h: < 8 h: 0 · 8–12 h: 50% · > 12 h: 100%
+- Podróż > 24 h: każda pełna doba 100%; rozpoczęta doba do 8 h: 50%, ponad 8 h: 100%
+- Posiłki zapewnione: śniadanie −25%, obiad −50%, kolacja −25% (dieta nie mniej niż 0 zł)
+- Ryczałt za nocleg (bez rachunku): 150% diety za każdą noc z ≥ 6 h między 21:00 a 7:00
+- Ryczałt na dojazdy komunikacją miejscową: 20% diety za każdą rozpoczętą dobę
+
+## Testy
+
+```bash
+npm test   # vitest — testy graniczne kalkulatora diet (src/lib/dieta.test.ts)
+```
 
 ## Zastrzeżenie
 

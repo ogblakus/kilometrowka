@@ -29,7 +29,12 @@ export const VEHICLE_RATES: Record<
   },
 };
 
-/** Diety krajowe — MRPiPS z 30.06.2022 (45 zł; projekt 60 zł nie jest prawem) */
+/**
+ * Diety krajowe — rozporządzenie MPiPS z 29.01.2013 (t.j. Dz.U. 2023 poz. 2190),
+ * § 7 ust. 1 w brzmieniu Dz.U. 2022 poz. 2302 (od 1.01.2023): 45 zł.
+ * Ryczałt za nocleg = 150% diety (§ 8 ust. 3), dojazdy = 20% diety (§ 9 ust. 1).
+ * Projekt podwyżki do 60 zł (2026) nie jest obowiązującym prawem.
+ */
 export const DIETA_DOBOWA = 45;
 export const DIETA_NOCLEG_RYCZALT = 67.5;
 export const DIETA_DOJAZDY_RYCZALT = 9;
@@ -43,7 +48,7 @@ export const RATE_SOURCES = [
   {
     title: "Diety krajowe",
     detail:
-      "Rozporządzenie Ministra Rodziny i Polityki Społecznej z dnia 25 października 2022 r. zmieniające rozporządzenie w sprawie należności przysługujących pracownikowi zatrudnionemu w państwowej lub samorządowej jednostce sfery budżetowej z tytułu podróży służbowej (MRPiPS / nowelizacja z 30.06.2022 w zakresie stawek). Stawka diety krajowej: 45 zł. Projekt podwyższenia do 60 zł nie jest obowiązującym prawem.",
+      "Rozporządzenie Ministra Pracy i Polityki Społecznej z dnia 29 stycznia 2013 r. w sprawie należności przysługujących pracownikowi zatrudnionemu w państwowej lub samorządowej jednostce sfery budżetowej z tytułu podróży służbowej (t.j. Dz.U. 2023 poz. 2190). Stawka diety krajowej 45 zł obowiązuje od 1 stycznia 2023 r. (zmiana: rozporządzenie Ministra Rodziny i Polityki Społecznej z 25 października 2022 r., Dz.U. 2022 poz. 2302). Projekt podwyższenia do 60 zł nie jest obowiązującym prawem.",
   },
 ] as const;
 
