@@ -3,6 +3,11 @@
 import { FormEvent, useEffect, useState } from "react";
 import { VEHICLE_RATES, calcTripAmount } from "@/lib/rates";
 import { formatZl, todayIsoWarsaw } from "@/lib/format";
+import {
+  TRIP_DATE_MIN,
+  TRIP_KM_MAX,
+  tripDateMax,
+} from "@/lib/trip-validate";
 import type { Trip, VehicleType } from "@/lib/types";
 
 interface Props {
@@ -54,10 +59,16 @@ export default function TripForm({
   function validate(): boolean {
     const next: Record<string, string> = {};
     if (!form.date) next.date = "Podaj datę.";
+    else if (form.date < TRIP_DATE_MIN || form.date > tripDateMax())
+      next.date = `Data musi być z zakresu ${TRIP_DATE_MIN} – ${tripDateMax()}.`;
     if (!form.from.trim()) next.from = "Podaj miejsce wyjazdu.";
     if (!form.to.trim()) next.to = "Podaj miejsce docelowe.";
     if (!form.km.trim() || Number.isNaN(kmNum) || kmNum <= 0) {
       next.km = "Kilometry muszą być większe od 0.";
+    } else if (Math.round(kmNum * 10) / 10 <= 0) {
+      next.km = "Minimum 0,1 km.";
+    } else if (kmNum > TRIP_KM_MAX) {
+      next.km = "Zbyt duża liczba kilometrów.";
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -110,6 +121,8 @@ export default function TripForm({
           <span className="text-slate-700">Data</span>
           <input
             type="date"
+            min={TRIP_DATE_MIN}
+            max={tripDateMax()}
             required
             value={form.date}
             onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}

@@ -22,8 +22,9 @@ export default function KupPage() {
       </h1>
       <p className="mt-3 text-base leading-relaxed text-slate-600">
         Plan Free wystarczy na start (do {FREE_TRIPS_PER_MONTH} przejazdów /
-        miesiąc + CSV). Premium daje pełną ewidencję bez limitów — nadal bez
-        konta, dane lokalnie w przeglądarce.
+        miesiąc + CSV). Premium daje pełną ewidencję bez limitów. Zakup wymaga
+        zalogowania — Premium jest przypisane do konta i działa na wszystkich
+        urządzeniach.
       </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -53,7 +54,7 @@ export default function KupPage() {
           <li>✓ Eksport CSV i Excel (.xlsx)</li>
           <li>✓ Kalkulator diet krajowych</li>
           <li>✓ Bez reklam</li>
-          <li>✓ Dane lokalnie (localStorage) — bez wymuszonego konta</li>
+          <li>✓ Synchronizacja przejazdów w chmurze między urządzeniami</li>
         </ul>
       </div>
 
@@ -89,9 +90,9 @@ export default function KupPage() {
         <p>
           <strong className="text-slate-700">Jak to działa:</strong> płatność
           przechodzi przez Stripe Checkout (subskrypcja miesięczna lub roczna).
-          Po udanej płatności Premium zapisuje się w tej przeglądarce
-          (localStorage) — bez konta i bez synchronizacji między urządzeniami.
-          Warto eksportować CSV/Excel na własny użytek.
+          Po udanej płatności Premium zapisuje się na Twoim koncie (wymagane
+          logowanie) i działa na wszystkich urządzeniach. Warto eksportować
+          CSV/Excel na własny użytek.
         </p>
       </aside>
     </div>

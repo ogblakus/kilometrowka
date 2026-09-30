@@ -6,29 +6,21 @@ export const FREE_TRIPS_PER_MONTH = 10;
 export const PREMIUM_PRICE_MONTHLY = 29;
 export const PREMIUM_PRICE_YEARLY = 279; // ~20% off vs 29×12
 
-const PLAN_KEY = "kilometrowka.app.plan.v1";
+/** Legacy localStorage key that used to cache the plan client-side. */
+const LEGACY_PLAN_KEY = "kilometrowka.app.plan.v1";
 
 /**
- * Guest-only local plan cache.
- * Signed-in users must use plan from Neon via GET /api/me — never treat
- * localStorage as authoritative entitlement.
+ * Remove the legacy local plan cache. The plan is never read from
+ * localStorage anymore: signed-in users get it only from GET /api/me (Neon),
+ * guests are always Free.
  */
-export function loadPlan(): Plan {
-  if (typeof window === "undefined") return "free";
-  const raw = localStorage.getItem(PLAN_KEY);
-  return raw === "premium" ? "premium" : "free";
-}
-
-/** Persist guest plan (or cache of server plan). Dispatches kilometrowka:plan. */
-export function savePlan(plan: Plan): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(PLAN_KEY, plan);
-  window.dispatchEvent(new Event("kilometrowka:plan"));
-}
-
-/** Reset guest/local plan (e.g. after sign-out — Premium lives on the account). */
 export function clearLocalPlan(): void {
-  savePlan("free");
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(LEGACY_PLAN_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 /** Current calendar month key in Europe/Warsaw (YYYY-MM). */
@@ -46,9 +38,15 @@ export function countTripsInMonth(trips: Trip[], monthKey: string): number {
   return trips.filter((t) => t.date.startsWith(monthKey)).length;
 }
 
-export function canAddTrip(plan: Plan, trips: Trip[]): boolean {
+/** Free plan quota check given the number of trips already used this month. */
+export function isWithinFreeQuota(plan: Plan, used: number): boolean {
   if (plan === "premium") return true;
-  return countTripsInMonth(trips, currentMonthKey()) < FREE_TRIPS_PER_MONTH;
+  return used < FREE_TRIPS_PER_MONTH;
+}
+
+/** Guest (local) check: counts local trips dated in the current month. */
+export function canAddTrip(plan: Plan, trips: Trip[]): boolean {
+  return isWithinFreeQuota(plan, countTripsInMonth(trips, currentMonthKey()));
 }
 
 export function canExportExcel(plan: Plan): boolean {

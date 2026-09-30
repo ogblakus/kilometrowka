@@ -22,7 +22,7 @@ import KalkulatorHeader from "@/components/KalkulatorHeader";
 import TripList from "@/components/TripList";
 import {
   deleteCloudTrip,
-  fetchCloudPlan,
+  fetchCloudMe,
   fetchCloudTrips,
   patchCloudTrip,
   postCloudTrip,
@@ -32,10 +32,10 @@ import {
   canAddTrip,
   canExportExcel,
   canUseDieta,
+  clearLocalPlan,
   countTripsInMonth,
   currentMonthKey,
-  loadPlan,
-  savePlan,
+  isWithinFreeQuota,
   type Plan,
 } from "@/lib/plan";
 import { loadTrips, saveTrips } from "@/lib/storage";
@@ -56,7 +56,12 @@ export default function CalculatorApp() {
   const [ready, setReady] = useState(false);
   const [cloudMode, setCloudMode] = useState(false);
   const [editing, setEditing] = useState<Trip | null>(null);
+  // Signed-in: plan comes only from GET /api/me (Neon). Guests: always Free.
   const [plan, setPlan] = useState<Plan>("free");
+  // Signed-in Free quota usage (trips CREATED this Warsaw month, from server)
+  const [cloudTripsThisMonth, setCloudTripsThisMonth] = useState<
+    number | null
+  >(null);
   const [monthFilter, setMonthFilter] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [paywall, setPaywall] = useState<"trips" | "excel" | "dieta" | null>(
@@ -67,8 +72,13 @@ export default function CalculatorApp() {
   const skipLocalSave = useRef(false);
 
   const refreshPlanFromCloud = useCallback(async () => {
-    const p = await fetchCloudPlan();
-    if (p) setPlan(p);
+    const me = await fetchCloudMe();
+    if (me) {
+      setPlan(me.plan);
+      setCloudTripsThisMonth(me.tripsThisMonth);
+    } else {
+      setPlan("free");
+    }
   }, []);
 
   const loadCloudTrips = useCallback(async () => {
@@ -102,18 +112,15 @@ export default function CalculatorApp() {
         setReady(true);
       })();
     } else {
-      // Guest: never keep cloud Premium from a previous session in localStorage (sign-out clears local Premium)
+      // Guest: always Free. Premium requires an account (purchase needs sign-in).
       setCloudMode(false);
       setTrips(loadTrips());
-      savePlan("free");
+      clearLocalPlan();
       setPlan("free");
+      setCloudTripsThisMonth(null);
       setImportOffer(null);
       setReady(true);
     }
-
-    const onPlan = () => setPlan(loadPlan());
-    window.addEventListener("kilometrowka:plan", onPlan);
-    return () => window.removeEventListener("kilometrowka:plan", onPlan);
   }, [isLoaded, isSignedIn, loadCloudTrips, refreshPlanFromCloud]);
 
   useEffect(() => {
@@ -136,8 +143,11 @@ export default function CalculatorApp() {
     ? trips.filter((t) => t.date.startsWith(monthFilter))
     : trips;
 
-  const tripsThisMonth = countTripsInMonth(trips, currentMonthKey());
-  const addBlocked = !canAddTrip(plan, trips);
+  const tripsThisMonth =
+    cloudMode && isSignedIn && cloudTripsThisMonth !== null
+      ? cloudTripsThisMonth
+      : countTripsInMonth(trips, currentMonthKey());
+  const addBlocked = !isWithinFreeQuota(plan, tripsThisMonth);
   const excelOk = canExportExcel(plan);
   const dietaOk = canUseDieta(plan);
 
@@ -162,19 +172,29 @@ export default function CalculatorApp() {
       return;
     }
 
-    if (!canAddTrip(plan, trips)) {
-      setPaywall("trips");
+    if (cloudMode && isSignedIn) {
+      if (!isWithinFreeQuota(plan, tripsThisMonth)) {
+        setPaywall("trips");
+        return;
+      }
+      const res = await postCloudTrip(data);
+      if (!res.ok) {
+        if (res.code === "TRIP_QUOTA") {
+          setPaywall("trips");
+          void refreshPlanFromCloud();
+          return;
+        }
+        setToast(res.error || "Błąd zapisu w chmurze.");
+        return;
+      }
+      setTrips((prev) => [res.trip, ...prev]);
+      setCloudTripsThisMonth((n) => (n === null ? n : n + 1));
+      setToast("Dodano przejazd (chmura).");
       return;
     }
 
-    if (cloudMode && isSignedIn) {
-      const trip = await postCloudTrip(data);
-      if (!trip) {
-        setToast("Błąd zapisu w chmurze.");
-        return;
-      }
-      setTrips((prev) => [trip, ...prev]);
-      setToast("Dodano przejazd (chmura).");
+    if (!canAddTrip(plan, trips)) {
+      setPaywall("trips");
       return;
     }
 
@@ -202,6 +222,7 @@ export default function CalculatorApp() {
       }
       setTrips((prev) => prev.filter((t) => t.id !== id));
       if (editing?.id === id) setEditing(null);
+      void refreshPlanFromCloud();
       setToast("Usunięto przejazd (chmura).");
       return;
     }
@@ -214,15 +235,26 @@ export default function CalculatorApp() {
     if (!importOffer?.length) return;
     setSyncing(true);
     try {
+      let imported = 0;
+      let quotaHit = false;
       for (const t of importOffer) {
-        await postCloudTrip(t);
+        const res = await postCloudTrip(t);
+        if (res.ok) imported++;
+        else if (res.code === "TRIP_QUOTA") {
+          quotaHit = true;
+          break;
+        }
       }
       localStorage.setItem(IMPORT_FLAG, "1");
       setImportOffer(null);
       await loadCloudTrips();
+      await refreshPlanFromCloud();
       setToast(
-        `Zaimportowano ${importOffer.length} przejazd(ów) z tej przeglądarki.`,
+        quotaHit
+          ? `Zaimportowano ${imported} z ${importOffer.length} przejazd(ów) — osiągnięto limit Free w tym miesiącu.`
+          : `Zaimportowano ${imported} przejazd(ów) z tej przeglądarki.`,
       );
+      if (quotaHit) setPaywall("trips");
     } catch {
       setToast("Częściowy błąd importu — odśwież listę.");
     } finally {
@@ -298,8 +330,10 @@ export default function CalculatorApp() {
         </div>
         <ExportButtons
           trips={filteredTrips}
-          canExcel={excelOk}
+          canExcel={excelOk && cloudMode && !!isSignedIn}
+          monthKey={monthFilter}
           onExcelBlocked={() => setPaywall("excel")}
+          onError={setToast}
         />
       </div>
 

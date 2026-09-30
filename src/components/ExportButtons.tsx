@@ -6,14 +6,20 @@ import type { Trip } from "@/lib/types";
 
 interface Props {
   trips: Trip[];
+  /** Server plan (Neon) says Premium; the export itself is re-checked server-side. */
   canExcel: boolean;
+  /** Month filter (YYYY-MM) applied to the server-side Excel export. */
+  monthKey?: string;
   onExcelBlocked?: () => void;
+  onError?: (message: string) => void;
 }
 
 export default function ExportButtons({
   trips,
   canExcel,
+  monthKey,
   onExcelBlocked,
+  onError,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const empty = trips.length === 0;
@@ -26,7 +32,8 @@ export default function ExportButtons({
     if (empty || busy) return;
     setBusy(true);
     try {
-      await exportXlsx(trips);
+      const err = await exportXlsx(monthKey || undefined);
+      if (err) onError?.(err);
     } finally {
       setBusy(false);
     }

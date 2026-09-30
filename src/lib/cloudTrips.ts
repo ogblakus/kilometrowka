@@ -1,23 +1,32 @@
 import type { Plan } from "@/lib/plan";
+import { isUuid } from "@/lib/trip-validate";
 import type { Trip } from "@/lib/types";
 
-const PLAN_KEY = "kilometrowka.app.plan.v1";
+export type CloudMe = {
+  plan: Plan;
+  /** Trips created this Warsaw month (Free quota usage); null if unknown. */
+  tripsThisMonth: number | null;
+};
 
 /**
- * Load plan from Neon via /api/me (Clerk session).
- * Caches into localStorage; signed-in UI must use the returned value as source of truth.
- * Does not dispatch kilometrowka:plan (avoids refresh loops).
+ * Load plan + quota usage from Neon via /api/me (Clerk session).
+ * This is the ONLY source of plan for signed-in users — nothing is cached
+ * in or read from localStorage.
  */
-export async function fetchCloudPlan(): Promise<Plan | null> {
+export async function fetchCloudMe(): Promise<CloudMe | null> {
   try {
-    const res = await fetch("/api/me");
+    const res = await fetch("/api/me", { cache: "no-store" });
     if (!res.ok) return null;
-    const data = (await res.json()) as { plan?: Plan };
+    const data = (await res.json()) as {
+      plan?: Plan;
+      tripsThisMonth?: number | null;
+    };
     if (data.plan === "premium" || data.plan === "free") {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(PLAN_KEY, data.plan);
-      }
-      return data.plan;
+      return {
+        plan: data.plan,
+        tripsThisMonth:
+          typeof data.tripsThisMonth === "number" ? data.tripsThisMonth : null,
+      };
     }
   } catch {
     /* ignore */
@@ -36,15 +45,20 @@ export async function fetchCloudTrips(): Promise<Trip[] | null> {
   }
 }
 
+export type PostTripResult =
+  | { ok: true; trip: Trip }
+  | { ok: false; code?: string; error?: string };
+
 export async function postCloudTrip(
   data: Omit<Trip, "id"> & { id?: string },
-): Promise<Trip | null> {
+): Promise<PostTripResult> {
   try {
     const res = await fetch("/api/trips", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id: data.id,
+        // Server accepts only UUID ids (legacy local ids are dropped)
+        id: isUuid(data.id) ? data.id : undefined,
         date: data.date,
         from: data.from,
         to: data.to,
@@ -54,11 +68,17 @@ export async function postCloudTrip(
         amount: data.amount,
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))) as {
+        code?: string;
+        error?: string;
+      };
+      return { ok: false, code: err.code, error: err.error };
+    }
     const json = (await res.json()) as { trip: Trip };
-    return json.trip;
+    return { ok: true, trip: json.trip };
   } catch {
-    return null;
+    return { ok: false };
   }
 }
 

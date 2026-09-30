@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuthUser } from "@/lib/auth-api";
-import { parseAndValidateTripBody } from "@/lib/trip-validate";
+import { isUuid, parseAndValidateTripBody } from "@/lib/trip-validate";
 import { deleteTrip, updateTrip } from "@/lib/trips-db";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -15,8 +15,8 @@ export async function PATCH(request: Request, context: Ctx) {
   }
 
   const { id } = await context.params;
-  if (!id) {
-    return NextResponse.json({ error: "Brak id." }, { status: 400 });
+  if (!isUuid(id)) {
+    return NextResponse.json({ error: "Nieprawidłowe id." }, { status: 400 });
   }
 
   let body: unknown;
@@ -56,8 +56,8 @@ export async function DELETE(_request: Request, context: Ctx) {
   }
 
   const { id } = await context.params;
-  if (!id) {
-    return NextResponse.json({ error: "Brak id." }, { status: 400 });
+  if (!isUuid(id)) {
+    return NextResponse.json({ error: "Nieprawidłowe id." }, { status: 400 });
   }
 
   try {

@@ -2,54 +2,62 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { SignInButton, useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
-import { savePlan } from "@/lib/plan";
 
-type Status = "checking" | "paid" | "unpaid" | "no_session" | "error";
+type Status =
+  | "checking"
+  | "paid"
+  | "unpaid"
+  | "no_session"
+  | "signin"
+  | "error";
 
+/**
+ * Premium is never unlocked client-side. The page only asks the server
+ * (POST /api/premium/activate) to verify the Stripe session — including that
+ * it belongs to the signed-in user — and shows the result. The Stripe webhook
+ * remains the source of truth.
+ */
 export default function SuccessClient() {
   const search = useSearchParams();
+  const { isLoaded, isSignedIn } = useAuth();
   const sessionId = search.get("session_id")?.trim() || "";
   const [status, setStatus] = useState<Status>(
     sessionId ? "checking" : "no_session",
   );
-  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !isLoaded) return;
+    if (!isSignedIn) {
+      setStatus("signin");
+      return;
+    }
 
     let cancelled = false;
+    setStatus("checking");
     (async () => {
       try {
-        const res = await fetch(
-          `/api/checkout/session?session_id=${encodeURIComponent(sessionId)}`,
-        );
-        const data = (await res.json()) as {
+        const res = await fetch("/api/premium/activate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
           paid?: boolean;
-          customerEmail?: string;
-          error?: string;
+          plan?: string;
         };
-
         if (cancelled) return;
 
-        if (res.ok && data.paid) {
-          savePlan("premium");
-          window.dispatchEvent(new Event("kilometrowka:plan"));
-          try {
-            await fetch("/api/premium/activate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ session_id: sessionId }),
-            });
-          } catch {
-            /* local plan already set; cloud sync best-effort */
-          }
-          setEmail(data.customerEmail || null);
+        if (res.ok && data.paid && data.plan === "premium") {
           setStatus("paid");
           return;
         }
-
-        if (res.status === 503) {
+        if (res.status === 401) {
+          setStatus("signin");
+          return;
+        }
+        if (res.status >= 500) {
           setStatus("error");
           return;
         }
@@ -62,7 +70,29 @@ export default function SuccessClient() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, isLoaded, isSignedIn]);
+
+  if (status === "signin") {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <h1 className="text-2xl font-bold text-slate-900">Zaloguj się</h1>
+        <p className="mt-3 text-sm text-slate-600">
+          Aby potwierdzić płatność i aktywować Premium, zaloguj się na konto,
+          z którego kupowałeś.
+        </p>
+        <div className="mt-6 flex justify-center">
+          <SignInButton mode="modal">
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              Zaloguj się
+            </button>
+          </SignInButton>
+        </div>
+      </div>
+    );
+  }
 
   if (status === "checking") {
     return (
@@ -85,14 +115,8 @@ export default function SuccessClient() {
           Premium odblokowane
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-slate-700">
-          Dziękujemy za zakup
-          {email ? (
-            <>
-              {" "}
-              (<span className="font-medium">{email}</span>)
-            </>
-          ) : null}
-          . Masz nielimitowane przejazdy, Excel i diety. Przy zalogowanym koncie plan Premium jest w chmurze i działa na wszystkich urządzeniach. </p>
+          Dziękujemy za zakup. Masz nielimitowane przejazdy, Excel i diety. Plan Premium jest zapisany na Twoim koncie i działa na wszystkich urządzeniach.
+        </p>
         <Link
           href="/kalkulator"
           className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"

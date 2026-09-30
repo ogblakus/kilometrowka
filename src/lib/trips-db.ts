@@ -60,32 +60,57 @@ export type TripInput = {
   amount: number;
 };
 
-export async function createTrip(
+export type CreateTripResult =
+  | { ok: true; trip: Trip }
+  | { ok: false; reason: "quota" };
+
+/**
+ * Atomically insert a trip, enforcing the Free monthly quota.
+ *
+ * Runs as one transaction: a per-user advisory lock serialises concurrent
+ * inserts for the same user, then a single INSERT … SELECT … WHERE inserts
+ * only if the user is Premium (read from Neon inside the same statement) or
+ * has created fewer than `freeLimit` trips in the current Warsaw calendar
+ * month. Under READ COMMITTED the INSERT takes a fresh snapshot after the
+ * lock, so it sees rows committed by the previous lock holder.
+ */
+export async function createTripWithQuota(
   clerkUserId: string,
   input: TripInput,
+  freeLimit: number,
   id?: string,
-): Promise<Trip> {
+): Promise<CreateTripResult> {
   const db = getDb();
-  const rows = id
-    ? await db`
-        INSERT INTO trips (
-          id, clerk_user_id, trip_date, from_place, to_place, km, purpose, vehicle, amount_pln
-        ) VALUES (
-          ${id}::uuid, ${clerkUserId}, ${input.date}::date, ${input.from}, ${input.to},
-          ${input.km}, ${input.purpose}, ${input.vehicle}, ${input.amount}
-        )
-        RETURNING id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln
-      `
-    : await db`
-        INSERT INTO trips (
-          clerk_user_id, trip_date, from_place, to_place, km, purpose, vehicle, amount_pln
-        ) VALUES (
-          ${clerkUserId}, ${input.date}::date, ${input.from}, ${input.to},
-          ${input.km}, ${input.purpose}, ${input.vehicle}, ${input.amount}
-        )
-        RETURNING id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln
-      `;
-  return rowToTrip(rows[0] as TripRow);
+  const tripId = id ?? crypto.randomUUID();
+  const results = await db.transaction((tx) => [
+    tx`SELECT pg_advisory_xact_lock(hashtextextended(${"trips:" + clerkUserId}, 0))`,
+    tx`
+      INSERT INTO trips (
+        id, clerk_user_id, trip_date, from_place, to_place, km, purpose, vehicle, amount_pln
+      )
+      SELECT
+        ${tripId}::uuid, ${clerkUserId}, ${input.date}::date, ${input.from}, ${input.to},
+        ${input.km}, ${input.purpose}, ${input.vehicle}, ${input.amount}
+      WHERE
+        COALESCE(
+          (SELECT plan FROM users WHERE clerk_user_id = ${clerkUserId}),
+          'free'
+        ) = 'premium'
+        OR (
+          SELECT COUNT(*)
+          FROM trips
+          WHERE clerk_user_id = ${clerkUserId}
+            AND created_at >= (
+              date_trunc('month', NOW() AT TIME ZONE 'Europe/Warsaw')
+              AT TIME ZONE 'Europe/Warsaw'
+            )
+        ) < ${freeLimit}
+      RETURNING id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln
+    `,
+  ], { isolationLevel: "ReadCommitted" });
+  const rows = results[1] as TripRow[];
+  if (!rows[0]) return { ok: false, reason: "quota" };
+  return { ok: true, trip: rowToTrip(rows[0]) };
 }
 
 export async function updateTrip(
@@ -124,17 +149,39 @@ export async function deleteTrip(
   return rows.length > 0;
 }
 
-/** Count trips in calendar month (YYYY-MM) for quota enforcement. */
-export async function countTripsInMonthDb(
+/**
+ * Count trips CREATED (created_at) in the current Europe/Warsaw calendar
+ * month — the same rule createTripWithQuota enforces.
+ */
+export async function countTripsCreatedThisMonthDb(
   clerkUserId: string,
-  monthKey: string,
 ): Promise<number> {
   const db = getDb();
   const rows = await db`
     SELECT COUNT(*)::int AS c
     FROM trips
     WHERE clerk_user_id = ${clerkUserId}
-      AND to_char(trip_date, 'YYYY-MM') = ${monthKey}
+      AND created_at >= (
+        date_trunc('month', NOW() AT TIME ZONE 'Europe/Warsaw')
+        AT TIME ZONE 'Europe/Warsaw'
+      )
   `;
   return Number((rows[0] as { c: number } | undefined)?.c ?? 0);
+}
+
+/** Trips for export, optionally limited to one trip_date month (YYYY-MM). */
+export async function listTripsForExport(
+  clerkUserId: string,
+  monthKey?: string,
+): Promise<Trip[]> {
+  if (!monthKey) return listTrips(clerkUserId);
+  const db = getDb();
+  const rows = await db`
+    SELECT id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln
+    FROM trips
+    WHERE clerk_user_id = ${clerkUserId}
+      AND to_char(trip_date, 'YYYY-MM') = ${monthKey}
+    ORDER BY trip_date DESC, created_at DESC
+  `;
+  return (rows as TripRow[]).map(rowToTrip);
 }

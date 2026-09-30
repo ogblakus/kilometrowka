@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAuthUser } from "@/lib/auth-api";
-import { currentMonthKey, FREE_TRIPS_PER_MONTH } from "@/lib/plan";
-import { parseAndValidateTripBody } from "@/lib/trip-validate";
-import {
-  countTripsInMonthDb,
-  createTrip,
-  listTrips,
-} from "@/lib/trips-db";
+import { FREE_TRIPS_PER_MONTH } from "@/lib/plan";
+import { isUuid, parseAndValidateTripBody } from "@/lib/trip-validate";
+import { createTripWithQuota, listTrips } from "@/lib/trips-db";
 
 export async function GET() {
   const authResult = await requireAuthUser();
@@ -50,12 +46,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
-  // Plan from Neon DB (Clerk user id) — never trust client body/query for entitlement
-  const plan = authResult.dbUser.plan === "premium" ? "premium" : "free";
-  if (plan !== "premium") {
-    const monthKey = currentMonthKey();
-    const used = await countTripsInMonthDb(authResult.userId, monthKey);
-    if (used >= FREE_TRIPS_PER_MONTH) {
+  // Client-supplied id is optional (used when importing local trips); must be a UUID.
+  const rawId =
+    body && typeof body === "object" && "id" in body
+      ? (body as { id: unknown }).id
+      : undefined;
+  if (rawId !== undefined && rawId !== null && rawId !== "" && !isUuid(rawId)) {
+    return NextResponse.json({ error: "Nieprawidłowe id." }, { status: 400 });
+  }
+  const id = isUuid(rawId) ? rawId.toLowerCase() : undefined;
+
+  try {
+    // Plan is read from Neon inside the insert; quota counts trips created
+    // (created_at) this Warsaw month, enforced atomically in one transaction.
+    const result = await createTripWithQuota(
+      authResult.userId,
+      parsed,
+      FREE_TRIPS_PER_MONTH,
+      id,
+    );
+    if (!result.ok) {
       return NextResponse.json(
         {
           error: `Limit Free: ${FREE_TRIPS_PER_MONTH} przejazdów / miesiąc. Wykup Premium.`,
@@ -64,20 +74,14 @@ export async function POST(request: Request) {
         { status: 403 },
       );
     }
-  }
-
-  const id =
-    body &&
-    typeof body === "object" &&
-    "id" in body &&
-    typeof (body as { id: unknown }).id === "string"
-      ? (body as { id: string }).id
-      : undefined;
-
-  try {
-    const trip = await createTrip(authResult.userId, parsed, id);
-    return NextResponse.json({ trip }, { status: 201 });
+    return NextResponse.json({ trip: result.trip }, { status: 201 });
   } catch (err) {
+    if ((err as { code?: string } | null)?.code === "23505") {
+      return NextResponse.json(
+        { error: "Przejazd o tym id już istnieje.", code: "TRIP_EXISTS" },
+        { status: 409 },
+      );
+    }
     console.error("[api/trips POST]", err);
     return NextResponse.json(
       { error: "Nie udało się zapisać przejazdu." },
