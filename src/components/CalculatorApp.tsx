@@ -12,6 +12,7 @@ import { useAuth } from "@clerk/nextjs";
 import CloudSyncBanners from "@/components/CloudSyncBanners";
 import Disclaimer from "@/components/Disclaimer";
 import DietaPremiumGate from "@/components/DietaPremiumGate";
+import EwidencjaProfileForm from "@/components/EwidencjaProfileForm";
 import ExportButtons from "@/components/ExportButtons";
 import MonthlyTotals from "@/components/MonthlyTotals";
 import PaywallModal from "@/components/PaywallModal";
@@ -38,8 +39,9 @@ import {
   isWithinFreeQuota,
   type Plan,
 } from "@/lib/plan";
-import { loadTrips, saveTrips } from "@/lib/storage";
-import type { Trip } from "@/lib/types";
+import { clearLegacyWaitlist, loadTrips, saveTrips } from "@/lib/storage";
+import { missingProfileFields } from "@/lib/ewidencja";
+import type { EwidencjaProfile, Trip } from "@/lib/types";
 
 const IMPORT_FLAG = "kilometrowka.app.import.offered.v1";
 
@@ -69,6 +71,7 @@ export default function CalculatorApp() {
   );
   const [importOffer, setImportOffer] = useState<Trip[] | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [profile, setProfile] = useState<EwidencjaProfile | null>(null);
   const skipLocalSave = useRef(false);
 
   const refreshPlanFromCloud = useCallback(async () => {
@@ -113,9 +116,12 @@ export default function CalculatorApp() {
       })();
     } else {
       // Guest: always Free. Premium requires an account (purchase needs sign-in).
+      // Reading localStorage (external system) after mount — intentional.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCloudMode(false);
       setTrips(loadTrips());
       clearLocalPlan();
+      clearLegacyWaitlist();
       setPlan("free");
       setCloudTripsThisMonth(null);
       setImportOffer(null);
@@ -207,6 +213,7 @@ export default function CalculatorApp() {
       purpose: data.purpose,
       vehicle: data.vehicle,
       amount: data.amount,
+      rate: data.rate,
     };
     setTrips((prev) => [trip, ...prev]);
     setToast("Dodano przejazd.");
@@ -332,10 +339,35 @@ export default function CalculatorApp() {
           trips={filteredTrips}
           canExcel={excelOk && cloudMode && !!isSignedIn}
           monthKey={monthFilter}
+          profile={profile}
           onExcelBlocked={() => setPaywall("excel")}
           onError={setToast}
         />
       </div>
+
+      <details className="rounded-xl border border-slate-200 bg-white p-4">
+        <summary className="cursor-pointer text-sm font-medium text-slate-900">
+          Dane do ewidencji przebiegu (osoba, pojazd)
+          {missingProfileFields(profile).length > 0 && (
+            <span className="ml-2 text-xs font-normal text-amber-700">
+              — uzupełnij: {missingProfileFields(profile).join(", ")}
+            </span>
+          )}
+        </summary>
+        <p className="mt-2 text-xs text-slate-500">
+          Ewidencja przebiegu pojazdu wymaga m.in. imienia i nazwiska, adresu,
+          numeru rejestracyjnego i pojemności silnika. Te dane trafiają do
+          nagłówka eksportu CSV/Excel.
+        </p>
+        <div className="mt-3">
+          <EwidencjaProfileForm
+            key={cloudMode && isSignedIn ? "cloud" : "local"}
+            cloud={!!(cloudMode && isSignedIn)}
+            onChange={setProfile}
+            compact
+          />
+        </div>
+      </details>
 
       <TripList
         trips={trips}

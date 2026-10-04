@@ -4,6 +4,10 @@ import {
   DIETA_NOCLEG_RYCZALT,
 } from "./rates";
 import type { DietaInput } from "./types";
+import { toWallClockMinutes } from "./dieta-validate";
+
+export { validateDietaInput } from "./dieta-validate";
+export type { DietaFieldErrors } from "./dieta-validate";
 
 export interface DietaResult {
   /** Czas podróży w godzinach (zaokrąglony do 0,1 h — do wyświetlania). */
@@ -35,7 +39,7 @@ const NIGHT_START = 21 * MIN_PER_HOUR;
 const NIGHT_LENGTH = 10 * MIN_PER_HOUR;
 const NIGHT_MIN_OVERLAP = 6 * MIN_PER_HOUR;
 
-/** Posiłki jako % diety (§ 7 ust. 4). */
+/** Posiłki jako % diety (§ 7 ust. 3). */
 const MEAL_PERCENT = { breakfast: 25, lunch: 50, dinner: 25 } as const;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -53,32 +57,6 @@ function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / MIN_PER_HOUR);
   const m = minutes % MIN_PER_HOUR;
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
-}
-
-/**
- * Zamienia datę i godzinę na minuty „zegarowe” (bez stref czasowych i zmiany
- * czasu letni/zimowy), żeby wynik nie zależał od strefy przeglądarki.
- */
-function toWallClockMinutes(date: string, time: string): number | null {
-  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  const tm = /^(\d{2}):(\d{2})(?::\d{2})?$/.exec(time);
-  if (!dm || !tm) return null;
-  const y = Number(dm[1]);
-  const mo = Number(dm[2]);
-  const d = Number(dm[3]);
-  const hh = Number(tm[1]);
-  const mm = Number(tm[2]);
-  if (hh > 23 || mm > 59) return null;
-  const ms = Date.UTC(y, mo - 1, d, hh, mm);
-  const check = new Date(ms);
-  if (
-    check.getUTCFullYear() !== y ||
-    check.getUTCMonth() !== mo - 1 ||
-    check.getUTCDate() !== d
-  ) {
-    return null;
-  }
-  return Math.round(ms / 60000);
 }
 
 function toCount(n: number | undefined): number {
@@ -181,7 +159,7 @@ export function calcDieta(input: DietaInput): DietaResult | null {
     }
   }
 
-  // --- Zapewnione posiłki (§ 7 ust. 4) ---
+  // --- Zapewnione posiłki (§ 7 ust. 3) ---
   const breakfasts = toCount(input.breakfasts);
   const lunches = toCount(input.lunches);
   const dinners = toCount(input.dinners);
@@ -241,3 +219,4 @@ export function calcDieta(input: DietaInput): DietaResult | null {
     breakdown,
   };
 }
+

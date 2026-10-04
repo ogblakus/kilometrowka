@@ -1,5 +1,5 @@
-import { calcTripAmount } from "@/lib/rates";
-import type { VehicleType } from "@/lib/types";
+import { calcTripAmount, getRateForDate } from "@/lib/rates";
+import type { EwidencjaProfile, VehicleType } from "@/lib/types";
 
 const VEHICLES = new Set<VehicleType>([
   "samochod_do_900",
@@ -55,6 +55,8 @@ export type ValidatedTripInput = {
   purpose: string;
   vehicle: VehicleType;
   amount: number;
+  /** Rate (zł/km) valid on `date` — snapshotted on the trip row. */
+  rate: number;
 };
 
 function isValidIsoDate(date: string): boolean {
@@ -121,8 +123,10 @@ export function parseAndValidateTripBody(
     return { error: "Nieprawidłowe km (minimum 0,1 km)." };
   }
   const purpose = purposeRaw || "—";
-  // Ignore client amount — always recompute on server
-  const amount = calcTripAmount(kmRounded, vehicle);
+  // Ignore client amount — always recompute on server with the rate valid
+  // on the trip date (versioned table), never "today's" rate.
+  const rate = getRateForDate(vehicle, date);
+  const amount = calcTripAmount(kmRounded, vehicle, rate);
 
   return {
     date,
@@ -132,5 +136,49 @@ export function parseAndValidateTripBody(
     purpose,
     vehicle,
     amount,
+    rate,
   };
+}
+
+export const PROFILE_TEXT_MAX = 200;
+export const ENGINE_CC_MAX = 20_000;
+const REGISTRATION_RE = /^[A-Z0-9 ]{0,12}$/;
+
+/** Validate the ewidencja profile (PUT /api/profile). */
+export function parseProfileBody(
+  body: unknown,
+): EwidencjaProfile | { error: string; field?: keyof EwidencjaProfile } {
+  if (!body || typeof body !== "object") return { error: "Nieprawidłowy JSON." };
+  const b = body as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
+  const fullName = str(b.fullName);
+  const address = str(b.address);
+  const employer = str(b.employer);
+  const vehicleRegistration = str(b.vehicleRegistration).toUpperCase().replace(/\s+/g, " ");
+  const ccRaw = b.vehicleEngineCc;
+  const cc =
+    ccRaw === "" || ccRaw === null || ccRaw === undefined ? 0 : Number(ccRaw);
+
+  for (const [field, v] of [
+    ["fullName", fullName],
+    ["address", address],
+    ["employer", employer],
+  ] as const) {
+    if (v.length > PROFILE_TEXT_MAX) {
+      return { error: `Pole jest za długie (max ${PROFILE_TEXT_MAX} znaków).`, field };
+    }
+  }
+  if (!REGISTRATION_RE.test(vehicleRegistration)) {
+    return {
+      error: "Numer rejestracyjny: tylko litery, cyfry i spacje (max 12 znaków).",
+      field: "vehicleRegistration",
+    };
+  }
+  if (!Number.isInteger(cc) || cc < 0 || cc > ENGINE_CC_MAX) {
+    return {
+      error: `Pojemność silnika: liczba całkowita 0–${ENGINE_CC_MAX} cm³.`,
+      field: "vehicleEngineCc",
+    };
+  }
+  return { fullName, address, employer, vehicleRegistration, vehicleEngineCc: cc };
 }

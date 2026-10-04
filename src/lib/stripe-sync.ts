@@ -2,6 +2,7 @@ import "server-only";
 import type Stripe from "stripe";
 import { getDb } from "@/lib/db";
 import type { Plan } from "@/lib/plan";
+import { getPremiumPriceIds } from "@/lib/stripe-server";
 
 /** Subscription statuses that grant Premium. */
 const PREMIUM_STATUSES = new Set<Stripe.Subscription.Status>([
@@ -27,15 +28,20 @@ export function idOf(
   return typeof value.id === "string" ? value.id : null;
 }
 
-/** True when any subscription item is priced under the Premium product. */
+/**
+ * True when any subscription item is the Premium product or one of the
+ * configured Premium prices (STRIPE_PRICE_ID_MONTHLY / _YEARLY).
+ */
 export function subscriptionHasPremiumProduct(
   sub: Stripe.Subscription,
   premiumProductId: string,
+  premiumPriceIds: string[] = getPremiumPriceIds(),
 ): boolean {
   return sub.items.data.some(
     (item) =>
       idOf(item.price?.product as string | { id: string } | null) ===
-      premiumProductId,
+        premiumProductId ||
+      (Boolean(item.price?.id) && premiumPriceIds.includes(item.price.id)),
   );
 }
 
@@ -98,6 +104,7 @@ async function resolveClerkUserId(
 export async function syncSubscriptionToUser(
   sub: Stripe.Subscription,
   clerkUserIdHint: string | null = null,
+  stripe: Stripe | null = null,
 ): Promise<SyncResult> {
   const premiumProductId = getPremiumProductId();
   if (!premiumProductId) {
@@ -132,9 +139,24 @@ export async function syncSubscriptionToUser(
     return { ok: true, clerkUserId, plan: "premium", status };
   }
 
-  // Non-granting status. Only touch the user if this is their current
-  // subscription (or they have none), so an old canceled subscription can't
-  // downgrade a user who already re-subscribed.
+  // Non-granting status. If the customer still has another active Premium
+  // subscription (e.g. a double purchase), switch to it instead of
+  // downgrading (W2).
+  if (stripe && customerId && !GRACE_STATUSES.has(status)) {
+    const other = await findActivePremiumSubscription(
+      stripe,
+      customerId,
+      premiumProductId,
+      sub.id,
+    );
+    if (other) {
+      return syncSubscriptionToUser(other, clerkUserId, null);
+    }
+  }
+
+  // Only touch the user if this is their current subscription (or they have
+  // none), so an old canceled subscription can't downgrade a user who already
+  // re-subscribed.
   const keepPlan = GRACE_STATUSES.has(status);
   const rows = await db`
     UPDATE users SET
@@ -159,6 +181,60 @@ export async function syncSubscriptionToUser(
   };
 }
 
+/** Another active/trialing Premium subscription of the same customer, if any. */
+export async function findActivePremiumSubscription(
+  stripe: Stripe,
+  customerId: string,
+  premiumProductId: string,
+  excludeId: string | null = null,
+): Promise<Stripe.Subscription | null> {
+  const list = await stripe.subscriptions.list({
+    customer: customerId,
+    status: "all",
+    limit: 20,
+  });
+  return (
+    list.data.find(
+      (s) =>
+        s.id !== excludeId &&
+        PREMIUM_STATUSES.has(s.status) &&
+        subscriptionHasPremiumProduct(s, premiumProductId),
+    ) ?? null
+  );
+}
+
+/** Sync results that mean "a paid subscription could not be applied". */
+export function isUnappliedPayment(result: SyncResult): boolean {
+  return (
+    !result.ok &&
+    (result.reason === "not_premium_product" || result.reason === "user_not_found")
+  );
+}
+
+/**
+ * Claim a webhook event (insert-first idempotency, N3). Returns false when
+ * the event was already processed or is being processed right now. A stale
+ * "processing" claim (> 5 min, e.g. crashed invocation) can be taken over.
+ */
+export async function claimEvent(eventId: string, type: string): Promise<boolean> {
+  const db = getDb();
+  const rows = await db`
+    INSERT INTO stripe_events (id, type, status, processed_at)
+    VALUES (${eventId}, ${type}, 'processing', NOW())
+    ON CONFLICT (id) DO UPDATE SET processed_at = NOW()
+      WHERE stripe_events.status = 'processing'
+        AND stripe_events.processed_at < NOW() - INTERVAL '5 minutes'
+    RETURNING id
+  `;
+  return rows.length > 0;
+}
+
+/** Release a claim after a failure so Stripe's retry is processed. */
+export async function releaseEvent(eventId: string): Promise<void> {
+  const db = getDb();
+  await db`DELETE FROM stripe_events WHERE id = ${eventId} AND status = 'processing'`;
+}
+
 /** Has this webhook event already been processed? */
 export async function isEventProcessed(eventId: string): Promise<boolean> {
   const db = getDb();
@@ -173,8 +249,8 @@ export async function markEventProcessed(
 ): Promise<void> {
   const db = getDb();
   await db`
-    INSERT INTO stripe_events (id, type, processed_at)
-    VALUES (${eventId}, ${type}, NOW())
-    ON CONFLICT (id) DO NOTHING
+    INSERT INTO stripe_events (id, type, status, processed_at)
+    VALUES (${eventId}, ${type}, 'processed', NOW())
+    ON CONFLICT (id) DO UPDATE SET status = 'processed', processed_at = NOW()
   `;
 }

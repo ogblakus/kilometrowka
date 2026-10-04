@@ -11,7 +11,7 @@ interface Props {
 const copy: Record<Props["reason"], { title: string; body: string }> = {
   trips: {
     title: "Limit darmowego planu",
-    body: `Na planie Free możesz dodać maksymalnie ${FREE_TRIPS_PER_MONTH} przejazdów w miesiącu. Premium daje nielimitowaną ewidencję.`,
+    body: `Na planie Free możesz dodać maksymalnie ${FREE_TRIPS_PER_MONTH} przejazdów w miesiącu (usunięcie wpisu nie zwalnia limitu). Premium daje nielimitowaną ewidencję.`,
   },
   excel: {
     title: "Eksport Excel w Premium",
@@ -46,14 +46,13 @@ export default function PaywallModal({ reason, onClose }: Props) {
           <li>✓ Nielimitowane przejazdy</li>
           <li>✓ Eksport Excel + CSV</li>
           <li>✓ Kalkulator diet krajowych</li>
-          <li>✓ Bez reklam</li>
         </ul>
         <p className="mt-3 text-sm text-slate-500">
           od{" "}
           <strong className="text-slate-900">
             {PREMIUM_PRICE_MONTHLY} zł/mies
           </strong>{" "}
-          lub taniej rocznie
+          lub 279 zł/rok · subskrypcja odnawiana automatycznie, rezygnacja w każdej chwili
         </p>
         <div className="mt-6 flex flex-wrap gap-2">
           <Link

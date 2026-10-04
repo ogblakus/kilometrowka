@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { exportCsv, exportXlsx } from "@/lib/export";
-import type { Trip } from "@/lib/types";
+import type { EwidencjaProfile, Trip } from "@/lib/types";
 
 interface Props {
   trips: Trip[];
@@ -10,6 +10,8 @@ interface Props {
   canExcel: boolean;
   /** Month filter (YYYY-MM) applied to the server-side Excel export. */
   monthKey?: string;
+  /** Ewidencja header data (person, vehicle) for the CSV. */
+  profile?: EwidencjaProfile | null;
   onExcelBlocked?: () => void;
   onError?: (message: string) => void;
 }
@@ -18,6 +20,7 @@ export default function ExportButtons({
   trips,
   canExcel,
   monthKey,
+  profile,
   onExcelBlocked,
   onError,
 }: Props) {
@@ -51,7 +54,7 @@ export default function ExportButtons({
       <button
         type="button"
         disabled={empty}
-        onClick={() => exportCsv(trips)}
+        onClick={() => exportCsv(trips, profile ?? null, monthKey || undefined)}
         title={empty ? "Dodaj przejazdy, aby eksportować" : "Pobierz CSV"}
         className={`${base} ${empty ? disabledCls : enabled}`}
       >

@@ -1,74 +1,72 @@
 import "server-only";
 import ExcelJS from "exceljs";
-import { formatDatePl } from "./format";
-import { VEHICLE_RATES } from "./rates";
-import type { Trip } from "./types";
+import { buildEwidencja, EWIDENCJA_COLUMNS } from "./ewidencja";
+import type { EwidencjaProfile, Trip } from "./types";
 
-/** Build the Excel workbook server-side (Premium-gated in /api/export/xlsx). */
-export async function buildTripsXlsx(trips: Trip[]): Promise<Buffer> {
+/**
+ * Build the Excel ewidencja server-side (Premium-gated in /api/export/xlsx).
+ * ExcelJS writes strings as text (never formulas), so no apostrophe prefix
+ * is needed here (audit N7) — that neutralisation is CSV-only.
+ */
+export async function buildTripsXlsx(
+  trips: Trip[],
+  profile: EwidencjaProfile | null = null,
+  monthKey?: string,
+): Promise<Buffer> {
+  const e = buildEwidencja(trips, profile, monthKey);
   const wb = new ExcelJS.Workbook();
   wb.creator = "Kilometrówka.app";
   wb.created = new Date();
 
   const ws = wb.addWorksheet("Ewidencja", {
-    views: [{ state: "frozen", ySplit: 1 }],
+    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
   });
-
   ws.columns = [
-    { header: "Data", key: "date", width: 12 },
-    { header: "Skąd", key: "from", width: 20 },
-    { header: "Dokąd", key: "to", width: 20 },
-    { header: "Km", key: "km", width: 10 },
-    { header: "Cel", key: "purpose", width: 28 },
-    { header: "Pojazd", key: "vehicle", width: 28 },
-    { header: "Stawka (zł/km)", key: "rate", width: 14 },
-    { header: "Kwota (zł)", key: "amount", width: 12 },
+    { key: "lp", width: 6 },
+    { key: "date", width: 13 },
+    { key: "route", width: 34 },
+    { key: "purpose", width: 30 },
+    { key: "km", width: 10 },
+    { key: "vehicle", width: 26 },
+    { key: "rate", width: 12 },
+    { key: "amount", width: 13 },
   ];
 
-  const headerRow = ws.getRow(1);
-  headerRow.font = { bold: true };
-  headerRow.fill = {
-    type: "pattern",
-    pattern: "solid",
-    fgColor: { argb: "FFE2E8F0" },
-  };
+  const title = ws.addRow([e.title]);
+  title.font = { bold: true, size: 14 };
+  for (const [k, v] of e.meta) {
+    const r = ws.addRow([k, "", v]);
+    ws.mergeCells(r.number, 1, r.number, 2);
+    r.getCell(1).font = { bold: true };
+  }
+  ws.addRow([]);
 
-  for (const t of trips) {
-    const rate = VEHICLE_RATES[t.vehicle];
-    // Prefix formula-like strings so Excel does not execute them
-    const safe = (s: string) => (/^[=+\-@\t\r\n]/.test(s) ? `'${s}` : s);
-    ws.addRow({
-      date: formatDatePl(t.date),
-      from: safe(t.from),
-      to: safe(t.to),
-      km: t.km,
-      purpose: safe(t.purpose),
-      vehicle: rate.label,
-      rate: rate.rate,
-      amount: t.amount,
-    });
+  const header = ws.addRow([...EWIDENCJA_COLUMNS]);
+  header.font = { bold: true };
+  header.alignment = { wrapText: true, vertical: "middle" };
+  header.eachCell((c) => {
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+    c.border = { bottom: { style: "thin" } };
+  });
+  ws.views = [{ state: "frozen", ySplit: header.number }];
+
+  for (const r of e.rows) {
+    const row = ws.addRow([r.lp, r.date, r.route, r.purpose, r.km, r.vehicle, r.rate, r.amount]);
+    row.getCell(5).numFmt = "0.0";
+    row.getCell(7).numFmt = "0.00##";
+    row.getCell(8).numFmt = "#,##0.00";
   }
 
-  const totals = trips.reduce(
-    (acc, t) => {
-      acc.km += t.km;
-      acc.amount += t.amount;
-      return acc;
-    },
-    { km: 0, amount: 0 }
-  );
-
-  const totalRow = ws.addRow({
-    date: "",
-    from: "",
-    to: "RAZEM",
-    km: Math.round(totals.km * 10) / 10,
-    purpose: "",
-    vehicle: "",
-    rate: "",
-    amount: Math.round(totals.amount * 100) / 100,
+  const total = ws.addRow(["", "", "", "RAZEM", e.totals.km, "", "", e.totals.amount]);
+  total.font = { bold: true };
+  total.getCell(5).numFmt = "0.0";
+  total.getCell(8).numFmt = "#,##0.00";
+  total.eachCell((c) => {
+    c.border = { top: { style: "thin" } };
   });
-  totalRow.font = { bold: true };
+
+  ws.addRow([]);
+  for (const f of e.footer) ws.addRow([f]);
 
   const buffer = await wb.xlsx.writeBuffer();
   return Buffer.from(buffer as ArrayBuffer);

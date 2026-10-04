@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OPERATOR, OPERATOR_ADDRESS } from "@/lib/legal";
 import { KILOMETROWKA_YEAR, RATE_SOURCES } from "@/lib/rates";
 
 export default function Footer() {
@@ -10,8 +11,9 @@ export default function Footer() {
             <p className="font-semibold text-slate-900">Kilometrówka.app</p>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
               Prosta ewidencja przejazdów i kalkulator kilometrówki oraz diet
-              krajowych na {KILOMETROWKA_YEAR} r. Dane zapisujesz lokalnie w
-              przeglądarce — bez konta i bez chmury.
+              krajowych na {KILOMETROWKA_YEAR} r. Tryb Gościa: dane tylko w
+              Twojej przeglądarce. Z Kontem: dane przechowywane na serwerach
+              naszych dostawców (szczegóły w Polityce prywatności).
             </p>
           </div>
           <div>
@@ -81,8 +83,23 @@ export default function Footer() {
         </div>
         <p className="mt-8 border-t border-slate-200 pt-6 text-xs leading-relaxed text-slate-500">
           © {KILOMETROWKA_YEAR} Kilometrówka.app · Narzędzie pomocnicze — nie
-          stanowi porady podatkowej, prawnej ani księgowej. Dane ewidencji są
-          przechowywane wyłącznie w przeglądarce użytkownika (localStorage).
+          stanowi porady podatkowej, prawnej ani księgowej. W trybie Gościa dane
+          ewidencji są przechowywane wyłącznie w przeglądarce (localStorage); po
+          zalogowaniu — na serwerze (Neon, UE), zob. Polityka prywatności.
+        </p>
+        <p className="mt-3 text-xs leading-relaxed text-slate-500">
+          Kilometrówka.app · {OPERATOR.company}, {OPERATOR_ADDRESS} · NIP {OPERATOR.nip} ·{" "}
+          <a href={`mailto:${OPERATOR.email}`} className="underline underline-offset-2 hover:text-slate-700">
+            {OPERATOR.email}
+          </a>{" "}
+          ·{" "}
+          <Link href="/regulamin" className="underline underline-offset-2 hover:text-slate-700">
+            Regulamin
+          </Link>{" "}
+          ·{" "}
+          <Link href="/polityka-prywatnosci" className="underline underline-offset-2 hover:text-slate-700">
+            Polityka prywatności
+          </Link>
         </p>
       </div>
     </footer>

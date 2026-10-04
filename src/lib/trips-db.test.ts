@@ -32,6 +32,7 @@ const input = {
   purpose: "x",
   vehicle: "motocykl" as const,
   amount: 6.9,
+  rate: 0.69,
 };
 
 const norm = (s: string) => s.replace(/\s+/g, " ");
@@ -42,22 +43,32 @@ describe("createTripWithQuota", () => {
     captured.insertRows = [];
   });
 
-  it("locks per user, then conditionally inserts in one READ COMMITTED transaction", async () => {
+  it("locks per user, conditionally inserts and bumps the quota counter in one transaction", async () => {
     await createTripWithQuota("user_1", input, 10);
     expect(captured.opts).toEqual({ isolationLevel: "ReadCommitted" });
-    expect(captured.queries).toHaveLength(2);
-    const [lock, insert] = captured.queries;
+    expect(captured.queries).toHaveLength(3);
+    const [lock, insert, quota] = captured.queries;
     expect(lock.text).toContain("pg_advisory_xact_lock");
     expect(lock.values).toContain("trips:user_1");
     const sql = norm(insert.text);
     expect(sql).toMatch(/INSERT INTO trips .* SELECT .* WHERE/);
-    // counts by created_at in the Warsaw month, never by trip_date
-    expect(sql).toContain("created_at >= ( date_trunc('month', NOW() AT TIME ZONE 'Europe/Warsaw') AT TIME ZONE 'Europe/Warsaw' )");
+    // quota = trips CREATED this Warsaw month (trip_quota), not current row count:
+    // deleting and re-adding a trip does not free the Free quota (audit S2)
+    expect(sql).toContain("FROM trip_quota");
+    expect(sql).toContain("date_trunc('month', NOW() AT TIME ZONE 'Europe/Warsaw')");
     expect(sql).not.toMatch(/to_char\(trip_date/);
-    // plan read from users table inside the statement
+    // effective Premium (incl. period-end grace) read inside the statement
     expect(sql).toContain("FROM users WHERE clerk_user_id =");
     expect(sql).toContain("= 'premium'");
+    expect(sql).toContain("current_period_end");
     expect(insert.values).toContain(10);
+    // rate snapshot stored with the trip
+    expect(sql).toContain("rate_pln_per_km");
+    expect(insert.values).toContain(0.69);
+    const q = norm(quota.text);
+    expect(q).toContain("INSERT INTO trip_quota");
+    expect(q).toContain("ON CONFLICT (clerk_user_id, month) DO UPDATE SET created_count = trip_quota.created_count + 1");
+    expect(q).toContain("WHERE EXISTS (SELECT 1 FROM trips WHERE id =");
   });
 
   it("returns quota when the conditional insert inserts nothing", async () => {
@@ -76,6 +87,7 @@ describe("createTripWithQuota", () => {
         purpose: "x",
         vehicle: "motocykl",
         amount_pln: "6.90",
+        rate_pln_per_km: "0.6900",
       },
     ];
     const r = await createTripWithQuota(
@@ -87,6 +99,6 @@ describe("createTripWithQuota", () => {
     expect(captured.queries[1].values[0]).toBe(
       "3f1c2a4e-9b7d-4c1e-8a2b-1234567890ab",
     );
-    expect(r).toMatchObject({ ok: true, trip: { km: 10, amount: 6.9 } });
+    expect(r).toMatchObject({ ok: true, trip: { km: 10, amount: 6.9, rate: 0.69 } });
   });
 });

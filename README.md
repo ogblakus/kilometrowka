@@ -14,25 +14,27 @@ Repo: https://github.com/ogblakus/kilometrowka
 - **Freemium** — Free: max 10 przejazdów/mies + CSV; Premium: nielimit + Excel + diety
 - **Eksport** — CSV (UTF-8 BOM, `;`) oraz Excel `.xlsx` (Premium)
 - **Diety krajowe** — 45 zł/doba (Premium)
-- **Płatności** — Stripe **Checkout Sessions** (`POST /api/checkout`) na `/kup`; po płatności `/kup/sukces` weryfikuje sesję i odblokowuje Premium. Bez konfiguracji Stripe → waitlista (bez udawania płatności).
-- **RODO** — `/polityka-prywatnosci`, `/regulamin`, stopka z disclaimerem
+- **Płatności** — Stripe **Checkout Sessions** (`POST /api/checkout`) na `/kup`; po płatności `/kup/sukces` weryfikuje sesję i odblokowuje Premium. Zamówienie wymaga akceptacji Regulaminu i żądania natychmiastowego świadczenia (zapisywane w `checkout_consents`). Subskrypcją (rezygnacja, karta, faktury) zarządza się w Stripe Customer Portal z `/konto`.
+- **Konto** — `/konto`: plan, portal Stripe, odstąpienie od umowy, dane do ewidencji przebiegu (osoba, pojazd), usunięcie konta
+- **RODO** — `/polityka-prywatnosci`, `/regulamin` (treść w `src/content/*.ts`), stopka z danymi sprzedawcy
 
 ## Plany
 
 | | Free | Premium | Dla firm |
 |---|------|---------|----------|
-| Cena | 0 zł | 29 zł/mies lub **279 zł/rok** (−20%) | 99 zł/mies (kontakt) |
+| Cena | 0 zł | 29 zł/mies lub **279 zł/rok** (oszczędzasz 69 zł) | od 99 zł/mies (wycena indywidualna) |
 | Przejazdy | max 10 / miesiąc | nielimit | indywidualnie |
 | CSV | ✓ | ✓ | ✓ |
 | Excel | ✗ | ✓ | ✓ |
 | Diety | ✗ | ✓ | ✓ |
 
-**Ops-only** (nie pokazuj klientom): lokalny override `/kalkulator?premium=1` (lub `?premium=0` = Free).  
-Po prawdziwej płatności Stripe: redirect na `/kup/sukces?session_id=…` → weryfikacja API → `plan=premium` w localStorage.
+Plan pochodzi wyłącznie z serwera (`GET /api/me` → Neon). Po płatności: `/kup/sukces?session_id=…` → `POST /api/premium/activate` (weryfikacja sesji po stronie serwera); źródłem prawdy jest webhook Stripe. Sprzedawca jest zwolniony z VAT (art. 113) — nigdy „Faktura VAT”.
 
 ## Stawki (2026)
 
-### Kilometrówka (Dz.U. 2023 poz. 5)
+### Kilometrówka (rozporządzenie MI, Dz.U. 2002 nr 27 poz. 271 ze zm.; stawki od 17.01.2023 — Dz.U. 2023 poz. 5)
+
+Tabela stawek jest wersjonowana (`RATE_TABLE` w `src/lib/rates.ts`); stawka obowiązująca w dniu przejazdu jest zapisywana przy przejeździe (`trips.rate_pln_per_km`) i używana w edycji i eksporcie.
 
 | Pojazd | Stawka |
 |--------|--------|
@@ -86,35 +88,35 @@ npm run build && npm start
 | `STRIPE_PRICE_ID_YEARLY` | `price_…` | Cena roczna |
 | `STRIPE_PRODUCT_ID_PREMIUM` | `prod_…` | Produkt Premium — tylko on nadaje Premium |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_…` | Signing secret endpointu webhooka — **tylko serwer** |
-| `DATABASE_URL` | `postgresql://…` | Neon (tabele `users`, `trips`, `stripe_events`) |
+| `DATABASE_URL` | `postgresql://…` | Neon (schemat: `database/migrations`) |
+| `CLERK_WEBHOOK_SIGNING_SECRET` | `whsec_…` | Webhook Clerk → `/api/clerk/webhook` (`user.updated`, `user.deleted`) |
+| `STRIPE_PORTAL_CONFIGURATION_ID` | `bpc_…` | Opcjonalnie; inaczej konfiguracja portalu jest tworzona automatycznie |
 
 3. **Webhook**: Stripe Dashboard → Developers → Webhooks → endpoint `https://<domena>/api/stripe/webhook`, zdarzenia `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted` → skopiuj `whsec_…` do `STRIPE_WEBHOOK_SECRET`.
 4. **Redeploy** po dodaniu env.
-5. Smoke: `/kup` → wybór mies/rok → „Zapłać przez Stripe” → Checkout → `/kup/sukces` → Premium w kalkulatorze.
-6. Bez powyższych zmiennych przycisk pokazuje **waitlistę** — nie udaje żywych płatności.
+5. Smoke: `/kup` → wybór mies/rok → 2 checkboxy → „Zamawiam i płacę” → Checkout → `/kup/sukces` → Premium w kalkulatorze → `/konto` → „Zarządzaj subskrypcją”.
+6. Bez powyższych zmiennych `/kup` informuje, że płatności są chwilowo niedostępne.
 
 ### Webhook i uprawnienia Premium
 
 - `POST /api/stripe/webhook` (runtime nodejs, publiczny — autoryzacja podpisem Stripe) jest **źródłem prawdy** dla `users.plan`.
-- Weryfikacja podpisu (`STRIPE_WEBHOOK_SECRET`) → 400 przy złym/brakującym podpisie. Deduplikacja po `event.id` w tabeli `stripe_events`. Błąd przetwarzania → 500 (Stripe ponowi).
+- Weryfikacja podpisu (`STRIPE_WEBHOOK_SECRET`) → 400 przy złym/brakującym podpisie. Idempotencja insert-first po `event.id` w `stripe_events` (status `processing` → `processed`); płatność z naszego checkoutu, której nie da się przypisać → 500 (Stripe ponawia, alarm w logach). Błąd przetwarzania → 500 (Stripe ponowi).
 - Mapowanie na użytkownika: `client_reference_id` / `metadata.clerk_user_id` (ustawiane w `/api/checkout`, także na subskrypcji) → `stripe_customer_id` → `stripe_subscription_id`.
-- Premium tylko gdy produkt subskrypcji = `STRIPE_PRODUCT_ID_PREMIUM` i status `active`/`trialing`. `past_due` = plan bez zmian (Stripe ponawia płatność); `canceled`/`unpaid`/`incomplete_expired`/inne = `free`.
+- Premium tylko gdy produkt subskrypcji = `STRIPE_PRODUCT_ID_PREMIUM` (lub cena = jedna z cen Premium) i status `active`/`trialing`. `past_due` = plan bez zmian (Stripe ponawia płatność); `canceled`/`unpaid`/`incomplete_expired`/inne = `free`.
 - Zapisywane w `users`: `stripe_customer_id`, `stripe_subscription_id`, `subscription_status`, `current_period_end`.
 - `POST /api/premium/activate` to szybka ścieżka po powrocie z Checkout — weryfikuje sesję po stronie serwera (opłacona, należy do zalogowanego użytkownika Clerk, właściwy produkt, subskrypcja aktywna). Nigdy nie ufa klientowi.
 
 ### Migracje bazy
 
-`database/migrations/*.sql` — idempotentne, uruchamiaj po kolei w Neon (SQL Editor lub `psql "$DATABASE_URL" -f …`).
-
-Opcjonalnie (legacy): `NEXT_PUBLIC_LEMON_CHECKOUT_URL` lub `NEXT_PUBLIC_STRIPE_PAYMENT_LINK` — używane tylko gdy Sessions nie są skonfigurowane.
+`database/migrations/*.sql` — idempotentne, uruchamiaj po kolei w Neon (SQL Editor lub `psql "$DATABASE_URL" -f …`); `000_init.sql` = schemat bazowy, zastosowane wersje w `schema_migrations`. Szczegóły: `database/README.md`.
 
 ## Jak wypuścić (checklist)
 
 1. Ustaw env Stripe (tabela wyżej) + Redeploy.
-2. **Deployment Protection**: Settings → Deployment Protection → wyłącz dla Production (albo wyjątki), żeby strona była publiczna.
-3. **Domena** (opcjonalnie): Settings → Domains → `kilometrowka.app` + DNS.
-4. Smoke: `/`, `/kalkulator`, limit Free, `/kup`, `/kup/sukces`, `/polityka-prywatnosci`, `/regulamin`.
-5. Test Premium bez Stripe: `/kalkulator?premium=1`.
+2. **Deployment Protection**: Standard Protection (Vercel Authentication) — preview i stare URL-e deploymentów wymagają logowania do Vercel; alias produkcyjny jest publiczny.
+3. **Domena** (do kupienia): Settings → Domains + DNS, potem instancja produkcyjna Clerk.
+4. Smoke: `/`, `/kalkulator`, limit Free, `/kup`, `/kup/sukces`, `/konto`, `/polityka-prywatnosci`, `/regulamin`.
+5. CI (`.github/workflows/ci.yml`): lint, typecheck, testy, build, `npm audit`.
 
 ## Stack
 

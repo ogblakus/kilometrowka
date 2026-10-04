@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { plPL } from "@clerk/localizations";
+import { clerkLocalization } from "@/lib/clerk-localization";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -23,7 +23,7 @@ const siteUrl =
 const titleDefault =
   "Kilometrówka.app — ewidencja przejazdów i kalkulator";
 const description =
-  "Prosta ewidencja kilometrówki i diet krajowych na 2026. Stawki Dz.U. 2023 poz. 5. Free: 10 przejazdów/mies + CSV. Premium: Excel, diety, bez limitów. Konto Clerk + sync w chmurze (Neon); gość: localStorage. MVP dla JDG i pracowników.";
+  "Prosta ewidencja kilometrówki i diet krajowych na 2026. Stawki wg rozporządzenia MI (Dz.U. 2002 nr 27 poz. 271 ze zm.). Free: 10 przejazdów/mies + CSV. Premium: Excel, diety, bez limitów. Konto z synchronizacją lub tryb Gościa w przeglądarce.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
       { url: "/icon.svg", type: "image/svg+xml" },
       { url: "/favicon.ico", sizes: "any" },
     ],
-    apple: "/icon.svg",
+    apple: "/apple-touch-icon.png",
   },
 };
 
@@ -86,7 +86,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider localization={plPL}>
+    <ClerkProvider localization={clerkLocalization}>
       <html lang="pl">
         <body
           className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}

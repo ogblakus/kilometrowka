@@ -4,7 +4,9 @@ export type Plan = "free" | "premium";
 
 export const FREE_TRIPS_PER_MONTH = 10;
 export const PREMIUM_PRICE_MONTHLY = 29;
-export const PREMIUM_PRICE_YEARLY = 279; // ~20% off vs 29×12
+export const PREMIUM_PRICE_YEARLY = 279; // 19,8% taniej niż 12 × 29 zł
+/** Savings of the yearly plan vs 12 monthly payments (zł). */
+export const YEARLY_SAVINGS = PREMIUM_PRICE_MONTHLY * 12 - PREMIUM_PRICE_YEARLY;
 
 /** Legacy localStorage key that used to cache the plan client-side. */
 const LEGACY_PLAN_KEY = "kilometrowka.app.plan.v1";
@@ -55,13 +57,4 @@ export function canExportExcel(plan: Plan): boolean {
 
 export function canUseDieta(plan: Plan): boolean {
   return plan === "premium";
-}
-
-/** Legacy public checkout URL (Lemon / Stripe Payment Link). Prefer server Checkout Sessions. */
-export function getCheckoutUrl(): string | null {
-  const lemon = process.env.NEXT_PUBLIC_LEMON_CHECKOUT_URL?.trim();
-  const stripe = process.env.NEXT_PUBLIC_STRIPE_PAYMENT_LINK?.trim();
-  if (lemon) return lemon;
-  if (stripe) return stripe;
-  return null;
 }

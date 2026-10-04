@@ -1,7 +1,8 @@
-import type { Trip, WaitlistEntry } from "./types";
+import { EMPTY_PROFILE, type EwidencjaProfile, type Trip } from "./types";
 
 const TRIPS_KEY = "kilometrowka.app.trips.v1";
-const WAITLIST_KEY = "kilometrowka.app.waitlist.v1";
+const PROFILE_KEY = "kilometrowka.app.profile.v1";
+const LEGACY_WAITLIST_KEY = "kilometrowka.app.waitlist.v1";
 
 function safeParse<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -22,17 +23,23 @@ export function saveTrips(trips: Trip[]): void {
   localStorage.setItem(TRIPS_KEY, JSON.stringify(trips));
 }
 
-export function loadWaitlist(): WaitlistEntry[] {
-  if (typeof window === "undefined") return [];
-  return safeParse<WaitlistEntry[]>(localStorage.getItem(WAITLIST_KEY), []);
+/** Guest-mode ewidencja profile (kept only in this browser). */
+export function loadLocalProfile(): EwidencjaProfile {
+  if (typeof window === "undefined") return EMPTY_PROFILE;
+  return { ...EMPTY_PROFILE, ...safeParse<Partial<EwidencjaProfile>>(localStorage.getItem(PROFILE_KEY), {}) };
 }
 
-export function saveWaitlistEmail(email: string): void {
+export function saveLocalProfile(p: EwidencjaProfile): void {
   if (typeof window === "undefined") return;
-  const list = loadWaitlist();
-  const normalized = email.trim().toLowerCase();
-  if (!normalized) return;
-  if (list.some((e) => e.email === normalized)) return;
-  list.push({ email: normalized, createdAt: new Date().toISOString() });
-  localStorage.setItem(WAITLIST_KEY, JSON.stringify(list));
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+}
+
+/** Remove the legacy local "waitlist" (e-mails were never sent anywhere). */
+export function clearLegacyWaitlist(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(LEGACY_WAITLIST_KEY);
+  } catch {
+    /* ignore */
+  }
 }

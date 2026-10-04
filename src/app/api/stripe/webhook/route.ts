@@ -2,16 +2,24 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe-server";
 import {
+  claimEvent,
   getPremiumProductId,
   idOf,
-  isEventProcessed,
+  isUnappliedPayment,
   markEventProcessed,
+  releaseEvent,
   syncSubscriptionToUser,
+  type SyncResult,
 } from "@/lib/stripe-sync";
 
 /**
  * Stripe webhook — source of truth for Premium entitlement.
  * Public route (no Clerk auth); authenticity is proven by the Stripe signature.
+ *
+ * Idempotency is insert-first (claimEvent). A paid subscription that cannot be
+ * applied (wrong product / unknown user) for one of OUR checkouts is NOT
+ * marked processed: we return 500 so Stripe retries and the failure is visible
+ * in the Stripe Dashboard and logs (audit K1/S6).
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -60,39 +68,59 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Webhook not configured." }, { status: 500 });
   }
 
+  let claimed = false;
   try {
-    if (await isEventProcessed(event.id)) {
+    claimed = await claimEvent(event.id, event.type);
+    if (!claimed) {
       return NextResponse.json({ received: true, duplicate: true });
     }
 
-    let result: unknown = null;
+    let result: SyncResult | { ok: false; reason: string } | null = null;
+    /** True when the object was created by our checkout (has our metadata). */
+    let ours = false;
 
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
       const subscriptionId = idOf(session.subscription);
+      const clerkUserId =
+        session.client_reference_id?.trim() ||
+        session.metadata?.clerk_user_id?.trim() ||
+        null;
+      ours = Boolean(clerkUserId);
       if (session.mode === "subscription" && subscriptionId) {
-        const clerkUserId =
-          session.client_reference_id?.trim() ||
-          session.metadata?.clerk_user_id?.trim() ||
-          null;
-        // Always re-fetch: never trust payload state, and handles out-of-order delivery.
+        // Always re-fetch: never trust payload state, handles out-of-order delivery.
         const sub = await stripe.subscriptions.retrieve(subscriptionId);
-        result = await syncSubscriptionToUser(sub, clerkUserId);
+        result = await syncSubscriptionToUser(sub, clerkUserId, stripe);
       } else {
         result = { ok: false, reason: "not_subscription_checkout" };
       }
     } else {
       const payloadSub = event.data.object as Stripe.Subscription;
+      ours = Boolean(payloadSub.metadata?.clerk_user_id);
       // Re-fetch the latest subscription state (deleted subs are still retrievable).
       const sub = await stripe.subscriptions.retrieve(payloadSub.id);
-      result = await syncSubscriptionToUser(sub, null);
+      result = await syncSubscriptionToUser(sub, null, stripe);
+    }
+
+    console.log("[stripe/webhook]", event.type, event.id, JSON.stringify(result));
+
+    if (ours && result && isUnappliedPayment(result as SyncResult)) {
+      console.error(
+        "[stripe/webhook] ALERT: subscription from our checkout not applied",
+        event.id,
+        JSON.stringify(result),
+      );
+      await releaseEvent(event.id);
+      return NextResponse.json({ error: "Subscription not applied." }, { status: 500 });
     }
 
     await markEventProcessed(event.id, event.type);
-    console.log("[stripe/webhook]", event.type, event.id, JSON.stringify(result));
     return NextResponse.json({ received: true });
   } catch (err) {
     console.error("[stripe/webhook] handler error", event.type, event.id, err);
+    if (claimed) {
+      await releaseEvent(event.id).catch(() => {});
+    }
     // 500 → Stripe retries later; event is not marked processed.
     return NextResponse.json({ error: "Handler error." }, { status: 500 });
   }

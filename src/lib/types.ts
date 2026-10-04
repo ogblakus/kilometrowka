@@ -13,12 +13,28 @@ export interface Trip {
   purpose: string;
   vehicle: VehicleType;
   amount: number;
+  /** Stawka zł/km zapisana przy przejeździe (snapshot); brak = stawka wg daty. */
+  rate?: number;
 }
 
-export interface WaitlistEntry {
-  email: string;
-  createdAt: string;
+/** Dane wymagane w ewidencji przebiegu pojazdu (art. 23 ust. 7 ustawy o PIT). */
+export interface EwidencjaProfile {
+  fullName: string;
+  address: string;
+  vehicleRegistration: string;
+  /** Pojemność silnika w cm³ (0 = nie podano). */
+  vehicleEngineCc: number;
+  /** Pracodawca / firma (opcjonalnie). */
+  employer: string;
 }
+
+export const EMPTY_PROFILE: EwidencjaProfile = {
+  fullName: "",
+  address: "",
+  vehicleRegistration: "",
+  vehicleEngineCc: 0,
+  employer: "",
+};
 
 export interface DietaInput {
   startDate: string;

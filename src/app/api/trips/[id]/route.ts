@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuthUser } from "@/lib/auth-api";
+import { rateLimitResponse } from "@/lib/rate-limit";
 import { isUuid, parseAndValidateTripBody } from "@/lib/trip-validate";
 import { deleteTrip, updateTrip } from "@/lib/trips-db";
 
@@ -13,6 +14,9 @@ export async function PATCH(request: Request, context: Ctx) {
       { status: authResult.status },
     );
   }
+
+  const limited = await rateLimitResponse("trips", authResult.userId);
+  if (limited) return limited;
 
   const { id } = await context.params;
   if (!isUuid(id)) {
@@ -54,6 +58,9 @@ export async function DELETE(_request: Request, context: Ctx) {
       { status: authResult.status },
     );
   }
+
+  const limited = await rateLimitResponse("trips", authResult.userId);
+  if (limited) return limited;
 
   const { id } = await context.params;
   if (!isUuid(id)) {
