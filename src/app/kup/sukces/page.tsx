@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import SuccessClient from "./SuccessClient";
 
 export const metadata: Metadata = {
-  title: "Płatność zakończona — Kilometrówka.app",
+  title: "Płatność zakończona",
   description: "Dziękujemy za zakup Premium. Odblokuj funkcje w przeglądarce.",
 };
 

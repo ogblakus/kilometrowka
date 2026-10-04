@@ -5,7 +5,7 @@ import { TERMS_EFFECTIVE_DATE, TERMS_VERSION } from "@/lib/legal";
 import { POLITYKA_PRYWATNOSCI_MD } from "@/content/polityka-prywatnosci";
 
 export const metadata: Metadata = {
-  title: "Polityka prywatności — Kilometrówka.app",
+  title: "Polityka prywatności",
   description: "Polityka prywatności Kilometrówka.app: administrator, dane, cele, odbiorcy, okresy przechowywania, prawa, cookies.",
 };
 

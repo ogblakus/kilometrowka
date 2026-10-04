@@ -5,7 +5,7 @@ import { TERMS_EFFECTIVE_DATE, TERMS_VERSION } from "@/lib/legal";
 import { REGULAMIN_MD } from "@/content/regulamin";
 
 export const metadata: Metadata = {
-  title: "Regulamin — Kilometrówka.app",
+  title: "Regulamin",
   description: "Regulamin serwisu Kilometrówka.app: usługi, Plan Premium (subskrypcja), płatności, rezygnacja, odstąpienie od umowy, reklamacje.",
 };
 
