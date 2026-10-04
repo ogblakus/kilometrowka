@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuthUser } from "@/lib/auth-api";
+import { rateLimitResponse } from "@/lib/rate-limit";
 import { FREE_TRIPS_PER_MONTH } from "@/lib/plan";
 import { isUuid, parseAndValidateTripBody } from "@/lib/trip-validate";
 import { createTripWithQuota, listTrips } from "@/lib/trips-db";
@@ -12,6 +13,9 @@ export async function GET() {
       { status: authResult.status },
     );
   }
+
+  const limited = await rateLimitResponse("tripsRead", authResult.userId);
+  if (limited) return limited;
 
   try {
     const trips = await listTrips(authResult.userId);
@@ -33,6 +37,9 @@ export async function POST(request: Request) {
       { status: authResult.status },
     );
   }
+
+  const limited = await rateLimitResponse("trips", authResult.userId);
+  if (limited) return limited;
 
   let body: unknown;
   try {
@@ -68,7 +75,7 @@ export async function POST(request: Request) {
     if (!result.ok) {
       return NextResponse.json(
         {
-          error: `Limit Free: ${FREE_TRIPS_PER_MONTH} przejazdów / miesiąc. Wykup Premium.`,
+          error: `Limit planu Free: ${FREE_TRIPS_PER_MONTH} dodanych przejazdów w miesiącu (usunięcie wpisu nie zwalnia limitu). Przejdź na Premium albo poczekaj do następnego miesiąca.`,
           code: "TRIP_QUOTA",
         },
         { status: 403 },

@@ -19,13 +19,21 @@ export async function GET() {
     console.error("[api/me] count", err);
   }
 
+  const u = authResult.dbUser;
   return NextResponse.json(
     {
-      email: authResult.dbUser.email,
-      plan: authResult.dbUser.plan,
-      // Free quota usage: trips created (not dated) this Warsaw month
+      email: u.email,
+      plan: u.plan,
+      // Free quota usage: trips CREATED this Warsaw month (deletes don't refund)
       tripsThisMonth,
       tripLimit: FREE_TRIPS_PER_MONTH,
+      subscription: u.stripe_customer_id
+        ? {
+            status: u.subscription_status,
+            currentPeriodEnd: u.current_period_end,
+            manageable: true,
+          }
+        : null,
     },
     { headers: { "Cache-Control": "no-store" } },
   );

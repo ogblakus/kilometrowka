@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
 export const alt = "Kilometrówka.app — ewidencja przejazdów i diety krajowe";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -53,10 +52,10 @@ export default function OgImage() {
           }}
         >
           <div style={{ display: "flex" }}>Ewidencja przejazdów</div>
-          <div style={{ display: "flex" }}>bez Excela i bez konta</div>
+          <div style={{ display: "flex" }}>bez Excela</div>
         </div>
         <div style={{ display: "flex", marginTop: 28, fontSize: 24, color: "#94a3b8" }}>
-          Stawki 2026 · diety krajowe · CSV / Excel · dane lokalnie
+          Stawki 2026 · diety krajowe · CSV / Excel · konto lub tryb Gościa
         </div>
         <div style={{ display: "flex", marginTop: 40, fontSize: 20, color: "#64748b" }}>
           MVP dla JDG i pracowników

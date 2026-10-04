@@ -11,7 +11,7 @@ const faq = [
   },
   {
     q: "Czym różni się Free od Premium?",
-    a: `Free: do ${FREE_TRIPS_PER_MONTH} przejazdów na miesiąc i eksport CSV. Premium: nielimitowane przejazdy, Excel (.xlsx), kalkulator diet krajowych, bez reklam. Po zalogowaniu dane w chmurze; gość = localStorage.`,
+    a: `Free: do ${FREE_TRIPS_PER_MONTH} przejazdów na miesiąc i eksport CSV. Premium: nielimitowane przejazdy, Excel (.xlsx), kalkulator diet krajowych. Po zalogowaniu dane są przechowywane na serwerze (Neon, UE); w trybie Gościa tylko w Twojej przeglądarce.`,
   },
   {
     q: "Jak działa płatność?",

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { requireAuthUser } from "@/lib/auth-api";
+import { rateLimitResponse } from "@/lib/rate-limit";
 import { getStripe, isStripeCheckoutConfigured } from "@/lib/stripe-server";
 import {
   getPremiumProductId,
@@ -16,6 +17,8 @@ import {
  *  - it belongs to the signed-in Clerk user (client_reference_id / metadata),
  *  - its subscription is for the Premium product and active/trialing.
  */
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   const authResult = await requireAuthUser();
   if (!authResult.ok) {
@@ -24,6 +27,9 @@ export async function POST(request: Request) {
       { status: authResult.status },
     );
   }
+
+  const limited = await rateLimitResponse("activate", authResult.userId);
+  if (limited) return limited;
 
   let body: unknown;
   try {
@@ -105,7 +111,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await syncSubscriptionToUser(sub, authResult.userId);
+    const result = await syncSubscriptionToUser(sub, authResult.userId, stripe);
     const plan =
       result.ok && result.plan === "premium"
         ? "premium"

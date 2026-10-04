@@ -59,7 +59,7 @@ export default function KalkulatorHeader({
         </div>
         <div className="mt-3 space-y-2 text-sm leading-relaxed text-slate-600">
           <p className="font-medium text-slate-700">
-            Stawki {KILOMETROWKA_YEAR} (Dz.U. 2023 poz. 5)
+            Stawki {KILOMETROWKA_YEAR} (Dz.U. 2002 nr 27 poz. 271 ze zm., w tym Dz.U. 2023 poz. 5)
           </p>
           <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             <li className="rounded-md border border-slate-100 bg-slate-50 px-2.5 py-1.5">
@@ -96,7 +96,7 @@ export default function KalkulatorHeader({
           </ul>
           <p>
             {cloudMode
-              ? "Dane w chmurze (konto Clerk + Neon)."
+              ? "Dane na Twoim koncie (serwer Neon, UE)."
               : "Tryb gościa: dane w localStorage tej przeglądarki."}
           </p>
         </div>

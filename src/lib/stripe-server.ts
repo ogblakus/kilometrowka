@@ -1,10 +1,18 @@
 import "server-only";
 import Stripe from "stripe";
 
+let client: Stripe | null = null;
+let clientKey: string | null = null;
+
+/** Memoised Stripe client (N14). API version = the SDK's pinned version. */
 export function getStripe(): Stripe | null {
   const key = process.env.STRIPE_SECRET_KEY?.trim();
   if (!key) return null;
-  return new Stripe(key);
+  if (!client || clientKey !== key) {
+    client = new Stripe(key, { maxNetworkRetries: 2, timeout: 20_000 });
+    clientKey = key;
+  }
+  return client;
 }
 
 export function isStripeCheckoutConfigured(): boolean {
@@ -21,16 +29,25 @@ export function getPriceId(interval: "month" | "year"): string | null {
   return process.env.STRIPE_PRICE_ID_YEARLY?.trim() || null;
 }
 
-/** Public site origin for success/cancel URLs. */
+/** Configured Premium price ids (entitlement also maps by price — K1 hardening). */
+export function getPremiumPriceIds(): string[] {
+  return [getPriceId("month"), getPriceId("year")].filter(
+    (x): x is string => Boolean(x),
+  );
+}
+
+/**
+ * Public site origin for Stripe success/cancel/return URLs.
+ * Never derived from request headers in production (N2: open redirect).
+ */
 export function resolveSiteUrl(request: Request): string {
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
   if (fromEnv) return fromEnv;
-
-  const proto =
-    request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || "https";
-  const host =
-    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
-    request.headers.get("host") ||
-    "localhost:3000";
-  return `${proto}://${host}`;
+  const prod = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (prod) return `https://${prod}`;
+  if (process.env.NODE_ENV !== "production") {
+    const host = request.headers.get("host") || "localhost:3000";
+    return `http://${host}`;
+  }
+  throw new Error("NEXT_PUBLIC_SITE_URL is not set");
 }

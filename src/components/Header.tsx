@@ -19,9 +19,13 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const menuId = useId();
 
-  useEffect(() => {
+  // Close the mobile menu on navigation (state adjustment during render,
+  // see react.dev "You might not need an effect").
+  const [lastPath, setLastPath] = useState(pathname);
+  if (lastPath !== pathname) {
+    setLastPath(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -96,11 +100,31 @@ export default function Header() {
                 </button>
               </SignInButton>
             ) : (
-              <UserButton
-                appearance={{
-                  elements: { avatarBox: "h-9 w-9" },
-                }}
-              />
+              <>
+                <Link
+                  href="/konto"
+                  className={`rounded-lg px-3 py-2 text-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${
+                    pathname.startsWith("/konto")
+                      ? "bg-slate-100 font-medium text-slate-900"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  Konto
+                </Link>
+                <UserButton
+                  appearance={{
+                    elements: { avatarBox: "h-9 w-9" },
+                  }}
+                >
+                  <UserButton.MenuItems>
+                    <UserButton.Link
+                      label="Zarządzaj subskrypcją i kontem"
+                      labelIcon={<span aria-hidden>⚙</span>}
+                      href="/konto"
+                    />
+                  </UserButton.MenuItems>
+                </UserButton>
+              </>
             )}
           </div>
         </nav>
@@ -156,7 +180,15 @@ export default function Header() {
                   Zaloguj się, żeby synchronizować
                 </button>
               </SignInButton>
-            ) : null}
+            ) : (
+              <Link
+                href="/konto"
+                className="rounded-lg px-3 py-3 text-base text-slate-700 hover:bg-slate-50"
+                onClick={() => setOpen(false)}
+              >
+                Konto i subskrypcja
+              </Link>
+            )}
           </nav>
         </div>
       )}

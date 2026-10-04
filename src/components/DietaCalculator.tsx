@@ -1,7 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { calcDieta } from "@/lib/dieta";
+import { useEffect, useMemo, useState } from "react";
+import type { DietaResult } from "@/lib/dieta";
+import {
+  validateDietaInput,
+  type DietaFieldErrors,
+} from "@/lib/dieta-validate";
 import {
   DIETA_DOBOWA,
   DIETA_DOJAZDY_RYCZALT,
@@ -38,7 +42,55 @@ export default function DietaCalculator() {
     dinners: 0,
   });
 
-  const result = useMemo(() => calcDieta(input), [input]);
+  // Inline validation runs locally; the amount is computed server-side
+  // (Premium-gated /api/dieta, audit S3).
+  const validation = useMemo(() => validateDietaInput(input), [input]);
+  const errors: DietaFieldErrors = "errors" in validation ? validation.errors : {};
+  const valid = !("errors" in validation);
+  const [result, setResult] = useState<DietaResult | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!valid) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      setLoading(true);
+      fetch("/api/dieta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+        signal: ctrl.signal,
+      })
+        .then(async (res) => {
+          const data = (await res.json().catch(() => ({}))) as {
+            result?: DietaResult;
+            error?: string;
+          };
+          if (!res.ok || !data.result) {
+            setResult(null);
+            setServerError(data.error || "Nie udało się obliczyć diety.");
+            return;
+          }
+          setServerError(null);
+          setResult(data.result);
+        })
+        .catch((e: unknown) => {
+          if ((e as { name?: string })?.name === "AbortError") return;
+          setResult(null);
+          setServerError("Brak połączenia — spróbuj ponownie.");
+        })
+        .finally(() => setLoading(false));
+    }, 350);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [input, valid]);
+
+  const errCls = "border-red-400";
+  const errText = (msg?: string) =>
+    msg ? <span className="mt-1 block text-xs text-red-600">{msg}</span> : null;
 
   return (
     <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -65,8 +117,10 @@ export default function DietaCalculator() {
             onChange={(e) =>
               setInput((i) => ({ ...i, startDate: e.target.value }))
             }
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-400"
+            aria-invalid={errors.startDate ? true : undefined}
+            className={`mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-400 ${errors.startDate ? errCls : ""}`}
           />
+          {errText(errors.startDate)}
         </label>
         <label className="block text-sm">
           <span className="text-slate-600">Początek — godzina</span>
@@ -76,8 +130,10 @@ export default function DietaCalculator() {
             onChange={(e) =>
               setInput((i) => ({ ...i, startTime: e.target.value }))
             }
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-400"
+            aria-invalid={errors.startTime ? true : undefined}
+            className={`mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-400 ${errors.startTime ? errCls : ""}`}
           />
+          {errText(errors.startTime)}
         </label>
         <label className="block text-sm">
           <span className="text-slate-600">Koniec — data</span>
@@ -87,8 +143,10 @@ export default function DietaCalculator() {
             onChange={(e) =>
               setInput((i) => ({ ...i, endDate: e.target.value }))
             }
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-400"
+            aria-invalid={errors.endDate ? true : undefined}
+            className={`mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-400 ${errors.endDate ? errCls : ""}`}
           />
+          {errText(errors.endDate)}
         </label>
         <label className="block text-sm">
           <span className="text-slate-600">Koniec — godzina</span>
@@ -98,8 +156,10 @@ export default function DietaCalculator() {
             onChange={(e) =>
               setInput((i) => ({ ...i, endTime: e.target.value }))
             }
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-400"
+            aria-invalid={errors.endTime ? true : undefined}
+            className={`mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-slate-400 ${errors.endTime ? errCls : ""}`}
           />
+          {errText(errors.endTime)}
         </label>
       </div>
 
@@ -131,6 +191,7 @@ export default function DietaCalculator() {
             </label>
           ))}
         </div>
+        {errText(errors.meals)}
       </fieldset>
 
       <div className="mt-3 flex flex-col gap-2 text-sm">
@@ -174,8 +235,16 @@ export default function DietaCalculator() {
         </label>
       </div>
 
-      {result ? (
-        <div className="mt-4 rounded-lg bg-slate-50 p-4">
+      {!valid ? (
+        <p className="mt-4 text-sm text-red-600" role="alert">
+          {errors.end || "Popraw zaznaczone pola."}
+        </p>
+      ) : serverError ? (
+        <p className="mt-4 text-sm text-red-600" role="alert">
+          {serverError}
+        </p>
+      ) : result ? (
+        <div className="mt-4 rounded-lg bg-slate-50 p-4" aria-busy={loading}>
           <p className="text-sm text-slate-600">
             Czas podróży:{" "}
             <strong>
@@ -189,12 +258,15 @@ export default function DietaCalculator() {
           </ul>
           <p className="mt-3 text-lg font-semibold text-slate-900">
             Razem: {formatZl(result.total)}
+            {loading && (
+              <span className="ml-2 text-xs font-normal text-slate-400">
+                przeliczam…
+              </span>
+            )}
           </p>
         </div>
       ) : (
-        <p className="mt-4 text-sm text-red-600">
-          Sprawdź daty i godziny — koniec musi być później niż początek.
-        </p>
+        <p className="mt-4 text-sm text-slate-500">Obliczam…</p>
       )}
 
       <div className="mt-4">

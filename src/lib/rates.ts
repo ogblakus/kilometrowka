@@ -1,33 +1,74 @@
 import type { VehicleType } from "./types";
 
-/** Stawki kilometrówki — Dz.U. 2023 poz. 5 (obowiązujące w 2026) */
+/**
+ * Stawki kilometrówki — rozporządzenie Ministra Infrastruktury z 25.03.2002 r.
+ * (Dz.U. 2002 nr 27 poz. 271 ze zm., w tym Dz.U. 2023 poz. 5).
+ */
 export const KILOMETROWKA_YEAR = 2026;
 
+export const KILOMETROWKA_CITATION =
+  "rozporządzenie Ministra Infrastruktury z 25.03.2002 r. (Dz.U. 2002 nr 27 poz. 271 ze zm., w tym Dz.U. 2023 poz. 5)";
+
+export const VEHICLE_LABELS: Record<VehicleType, { label: string; short: string }> = {
+  samochod_do_900: { label: "Samochód osobowy ≤ 900 cm³", short: "Auto ≤900 cm³" },
+  samochod_ponad_900: { label: "Samochód osobowy > 900 cm³", short: "Auto >900 cm³" },
+  motocykl: { label: "Motocykl", short: "Motocykl" },
+  motorower: { label: "Motorower", short: "Motorower" },
+};
+
+/**
+ * Versioned rate table (newest first). A trip uses the rate valid on its
+ * trip_date; the rate is also snapshotted on the trip row (rate_pln_per_km),
+ * so historical exports stay consistent after a future change.
+ */
+export const RATE_TABLE: ReadonlyArray<{
+  validFrom: string; // YYYY-MM-DD, inclusive
+  source: string;
+  rates: Record<VehicleType, number>;
+}> = [
+  {
+    validFrom: "2023-01-17",
+    source: "Dz.U. 2023 poz. 5",
+    rates: {
+      samochod_do_900: 0.89,
+      samochod_ponad_900: 1.15,
+      motocykl: 0.69,
+      motorower: 0.42,
+    },
+  },
+  {
+    validFrom: "2007-12-01",
+    source: "Dz.U. 2007 nr 201 poz. 1462",
+    rates: {
+      samochod_do_900: 0.5214,
+      samochod_ponad_900: 0.8358,
+      motocykl: 0.2302,
+      motorower: 0.1382,
+    },
+  },
+];
+
+/** Rate valid on the given date (YYYY-MM-DD); defaults to the current table. */
+export function getRateForDate(vehicle: VehicleType, date?: string): number {
+  if (date) {
+    for (const row of RATE_TABLE) {
+      if (date >= row.validFrom) return row.rates[vehicle];
+    }
+    return RATE_TABLE[RATE_TABLE.length - 1].rates[vehicle];
+  }
+  return RATE_TABLE[0].rates[vehicle];
+}
+
+/** Current rates with labels (UI). */
 export const VEHICLE_RATES: Record<
   VehicleType,
   { label: string; rate: number; short: string }
-> = {
-  samochod_do_900: {
-    label: "Samochód osobowy ≤ 900 cm³",
-    short: "Auto ≤900 cm³",
-    rate: 0.89,
-  },
-  samochod_ponad_900: {
-    label: "Samochód osobowy > 900 cm³",
-    short: "Auto >900 cm³",
-    rate: 1.15,
-  },
-  motocykl: {
-    label: "Motocykl",
-    short: "Motocykl",
-    rate: 0.69,
-  },
-  motorower: {
-    label: "Motorower",
-    short: "Motorower",
-    rate: 0.42,
-  },
-};
+> = Object.fromEntries(
+  (Object.keys(VEHICLE_LABELS) as VehicleType[]).map((v) => [
+    v,
+    { ...VEHICLE_LABELS[v], rate: RATE_TABLE[0].rates[v] },
+  ]),
+) as Record<VehicleType, { label: string; rate: number; short: string }>;
 
 /**
  * Diety krajowe — rozporządzenie MPiPS z 29.01.2013 (t.j. Dz.U. 2023 poz. 2190),
@@ -43,7 +84,7 @@ export const RATE_SOURCES = [
   {
     title: "Kilometrówka",
     detail:
-      "Rozporządzenie Ministra Infrastruktury w sprawie warunków ustalania oraz sposobu dokonywania zwrotu kosztów używania do celów służbowych samochodów osobowych, motocykli i motorowerów niebędących własnością pracodawcy — Dz.U. 2023 poz. 5.",
+      "Rozporządzenie Ministra Infrastruktury z dnia 25 marca 2002 r. w sprawie warunków ustalania oraz sposobu dokonywania zwrotu kosztów używania do celów służbowych samochodów osobowych, motocykli i motorowerów niebędących własnością pracodawcy (Dz.U. 2002 nr 27 poz. 271 ze zm.; stawki w brzmieniu Dz.U. 2023 poz. 5, od 17.01.2023). Są to stawki maksymalne.",
   },
   {
     title: "Diety krajowe",
@@ -52,10 +93,17 @@ export const RATE_SOURCES = [
   },
 ] as const;
 
-export function getRate(vehicle: VehicleType): number {
-  return VEHICLE_RATES[vehicle].rate;
+export function getRate(vehicle: VehicleType, date?: string): number {
+  return getRateForDate(vehicle, date);
 }
 
-export function calcTripAmount(km: number, vehicle: VehicleType): number {
-  return Math.round(km * getRate(vehicle) * 100) / 100;
+/** Amount = km × rate, rounded to grosze. Pass `rate` to use a snapshot. */
+export function calcTripAmount(
+  km: number,
+  vehicle: VehicleType,
+  dateOrRate?: string | number,
+): number {
+  const rate =
+    typeof dateOrRate === "number" ? dateOrRate : getRateForDate(vehicle, dateOrRate);
+  return Math.round(km * rate * 100) / 100;
 }

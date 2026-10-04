@@ -16,7 +16,7 @@ export default function Disclaimer({ compact = false }: { compact?: boolean }) {
       <p className="mt-1">
         Kilometrówka.app to narzędzie pomocnicze do ewidencji przejazdów i
         szacowania należności. <strong>Nie stanowi porady podatkowej, prawnej
-        ani księgowej.</strong> Oficjalne stawki kilometrówki (Dz.U. 2023 poz. 5)
+        ani księgowej.</strong> Oficjalne stawki kilometrówki (rozporządzenie Ministra Infrastruktury z 25.03.2002 r., Dz.U. 2002 nr 27 poz. 271 ze zm., w tym Dz.U. 2023 poz. 5) to stawki maksymalne i
         służą przede wszystkim do zwrotu kosztów pracownikowi za używanie
         prywatnego samochodu / motocykla / motoroweru do celów służbowych.
         Zasady rozliczeń podatkowych jednoosobowej działalności gospodarczej

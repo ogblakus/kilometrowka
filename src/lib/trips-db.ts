@@ -1,6 +1,13 @@
 import "server-only";
 import { getDb } from "@/lib/db";
+import { getRateForDate } from "@/lib/rates";
+import { PREMIUM_GRACE_DAYS } from "@/lib/users";
 import type { Trip, VehicleType } from "@/lib/types";
+
+/** Hard cap of stored trips per account (Premium has no monthly limit). */
+export const MAX_TRIPS_PER_USER = 50_000;
+/** Max rows returned by the list endpoint (newest first). */
+export const LIST_LIMIT = 5_000;
 
 type TripRow = {
   id: string;
@@ -11,6 +18,7 @@ type TripRow = {
   purpose: string;
   vehicle: string;
   amount_pln: string | number;
+  rate_pln_per_km?: string | number | null;
 };
 
 const VEHICLES = new Set<VehicleType>([
@@ -20,32 +28,40 @@ const VEHICLES = new Set<VehicleType>([
   "motorower",
 ]);
 
-function rowToTrip(row: TripRow): Trip {
+export function rowToTrip(row: TripRow): Trip {
   const vehicle = VEHICLES.has(row.vehicle as VehicleType)
     ? (row.vehicle as VehicleType)
     : "samochod_ponad_900";
+  const date =
+    typeof row.trip_date === "string"
+      ? row.trip_date.slice(0, 10)
+      : String(row.trip_date).slice(0, 10);
+  const snap =
+    row.rate_pln_per_km === null || row.rate_pln_per_km === undefined
+      ? NaN
+      : Number(row.rate_pln_per_km);
   return {
     id: row.id,
-    date:
-      typeof row.trip_date === "string"
-        ? row.trip_date.slice(0, 10)
-        : String(row.trip_date).slice(0, 10),
+    date,
     from: row.from_place,
     to: row.to_place,
     km: Number(row.km),
     purpose: row.purpose,
     vehicle,
     amount: Number(row.amount_pln),
+    // Legacy rows without a snapshot: rate valid on the trip date.
+    rate: Number.isFinite(snap) && snap > 0 ? snap : getRateForDate(vehicle, date),
   };
 }
 
 export async function listTrips(clerkUserId: string): Promise<Trip[]> {
   const db = getDb();
   const rows = await db`
-    SELECT id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln
+    SELECT id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln, rate_pln_per_km
     FROM trips
     WHERE clerk_user_id = ${clerkUserId}
     ORDER BY trip_date DESC, created_at DESC
+    LIMIT ${LIST_LIMIT}
   `;
   return (rows as TripRow[]).map(rowToTrip);
 }
@@ -58,21 +74,25 @@ export type TripInput = {
   purpose: string;
   vehicle: VehicleType;
   amount: number;
+  rate: number;
 };
 
 export type CreateTripResult =
   | { ok: true; trip: Trip }
   | { ok: false; reason: "quota" };
 
+
 /**
  * Atomically insert a trip, enforcing the Free monthly quota.
  *
- * Runs as one transaction: a per-user advisory lock serialises concurrent
- * inserts for the same user, then a single INSERT … SELECT … WHERE inserts
- * only if the user is Premium (read from Neon inside the same statement) or
- * has created fewer than `freeLimit` trips in the current Warsaw calendar
- * month. Under READ COMMITTED the INSERT takes a fresh snapshot after the
- * lock, so it sees rows committed by the previous lock holder.
+ * One READ COMMITTED transaction:
+ *  1. per-user advisory lock (serialises concurrent inserts),
+ *  2. INSERT … SELECT … WHERE (effective Premium OR trips CREATED this Warsaw
+ *     month < limit) AND total rows < MAX_TRIPS_PER_USER,
+ *  3. increment trip_quota for the month only if (2) inserted.
+ *
+ * The quota counts creations in `trip_quota`, not live rows, so deleting a
+ * trip does not give the slot back (audit S2).
  */
 export async function createTripWithQuota(
   clerkUserId: string,
@@ -82,36 +102,49 @@ export async function createTripWithQuota(
 ): Promise<CreateTripResult> {
   const db = getDb();
   const tripId = id ?? crypto.randomUUID();
-  const results = await db.transaction((tx) => [
-    tx`SELECT pg_advisory_xact_lock(hashtextextended(${"trips:" + clerkUserId}, 0))`,
-    tx`
+  const results = await db.transaction(
+    (tx) => [
+      tx`SELECT pg_advisory_xact_lock(hashtextextended(${"trips:" + clerkUserId}, 0))`,
+      tx`
       INSERT INTO trips (
-        id, clerk_user_id, trip_date, from_place, to_place, km, purpose, vehicle, amount_pln
+        id, clerk_user_id, trip_date, from_place, to_place, km, purpose, vehicle, amount_pln, rate_pln_per_km
       )
       SELECT
         ${tripId}::uuid, ${clerkUserId}, ${input.date}::date, ${input.from}, ${input.to},
-        ${input.km}, ${input.purpose}, ${input.vehicle}, ${input.amount}
+        ${input.km}, ${input.purpose}, ${input.vehicle}, ${input.amount}, ${input.rate}
       WHERE
-        COALESCE(
-          (SELECT plan FROM users WHERE clerk_user_id = ${clerkUserId}),
-          'free'
-        ) = 'premium'
-        OR (
-          SELECT COUNT(*)
-          FROM trips
-          WHERE clerk_user_id = ${clerkUserId}
-            AND created_at >= (
-              date_trunc('month', NOW() AT TIME ZONE 'Europe/Warsaw')
-              AT TIME ZONE 'Europe/Warsaw'
-            )
-        ) < ${freeLimit}
-      RETURNING id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln
+        (
+          EXISTS (
+            SELECT 1 FROM users
+            WHERE clerk_user_id = ${clerkUserId}
+              AND plan = 'premium'
+              AND (current_period_end IS NULL
+                   OR current_period_end > NOW() - make_interval(days => ${PREMIUM_GRACE_DAYS}))
+          )
+          OR COALESCE((
+            SELECT created_count FROM trip_quota
+            WHERE clerk_user_id = ${clerkUserId}
+              AND month = date_trunc('month', NOW() AT TIME ZONE 'Europe/Warsaw')::date
+          ), 0) < ${freeLimit}
+        )
+        AND (SELECT COUNT(*) FROM trips WHERE clerk_user_id = ${clerkUserId}) < ${MAX_TRIPS_PER_USER}
+      RETURNING id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln, rate_pln_per_km
     `,
-  ], { isolationLevel: "ReadCommitted" });
+      tx`
+      INSERT INTO trip_quota (clerk_user_id, month, created_count)
+      SELECT ${clerkUserId}, date_trunc('month', NOW() AT TIME ZONE 'Europe/Warsaw')::date, 1
+      WHERE EXISTS (SELECT 1 FROM trips WHERE id = ${tripId}::uuid AND clerk_user_id = ${clerkUserId})
+      ON CONFLICT (clerk_user_id, month)
+        DO UPDATE SET created_count = trip_quota.created_count + 1
+    `,
+    ],
+    { isolationLevel: "ReadCommitted" },
+  );
   const rows = results[1] as TripRow[];
   if (!rows[0]) return { ok: false, reason: "quota" };
   return { ok: true, trip: rowToTrip(rows[0]) };
 }
+
 
 export async function updateTrip(
   clerkUserId: string,
@@ -128,9 +161,10 @@ export async function updateTrip(
       purpose = ${input.purpose},
       vehicle = ${input.vehicle},
       amount_pln = ${input.amount},
+      rate_pln_per_km = ${input.rate},
       updated_at = NOW()
     WHERE id = ${id}::uuid AND clerk_user_id = ${clerkUserId}
-    RETURNING id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln
+    RETURNING id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln, rate_pln_per_km
   `;
   if (!rows[0]) return null;
   return rowToTrip(rows[0] as TripRow);
@@ -150,38 +184,55 @@ export async function deleteTrip(
 }
 
 /**
- * Count trips CREATED (created_at) in the current Europe/Warsaw calendar
- * month — the same rule createTripWithQuota enforces.
+ * Trips CREATED in the current Europe/Warsaw month (Free quota usage) —
+ * read from trip_quota, the same counter createTripWithQuota enforces.
  */
 export async function countTripsCreatedThisMonthDb(
   clerkUserId: string,
 ): Promise<number> {
   const db = getDb();
   const rows = await db`
-    SELECT COUNT(*)::int AS c
-    FROM trips
-    WHERE clerk_user_id = ${clerkUserId}
-      AND created_at >= (
-        date_trunc('month', NOW() AT TIME ZONE 'Europe/Warsaw')
-        AT TIME ZONE 'Europe/Warsaw'
-      )
+    SELECT COALESCE((
+      SELECT created_count FROM trip_quota
+      WHERE clerk_user_id = ${clerkUserId}
+        AND month = date_trunc('month', NOW() AT TIME ZONE 'Europe/Warsaw')::date
+    ), 0)::int AS c
   `;
   return Number((rows[0] as { c: number } | undefined)?.c ?? 0);
 }
 
-/** Trips for export, optionally limited to one trip_date month (YYYY-MM). */
+/** First day of the month after `YYYY-MM`. */
+export function nextMonthStart(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  const ny = m === 12 ? y + 1 : y;
+  const nm = m === 12 ? 1 : m + 1;
+  return `${ny}-${String(nm).padStart(2, "0")}-01`;
+}
+
+/**
+ * Trips for export in chronological order (ewidencja numbering),
+ * optionally one trip_date month (YYYY-MM). Uses the (user, trip_date) index.
+ */
 export async function listTripsForExport(
   clerkUserId: string,
   monthKey?: string,
 ): Promise<Trip[]> {
-  if (!monthKey) return listTrips(clerkUserId);
   const db = getDb();
-  const rows = await db`
-    SELECT id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln
-    FROM trips
-    WHERE clerk_user_id = ${clerkUserId}
-      AND to_char(trip_date, 'YYYY-MM') = ${monthKey}
-    ORDER BY trip_date DESC, created_at DESC
-  `;
+  const rows = monthKey
+    ? await db`
+        SELECT id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln, rate_pln_per_km
+        FROM trips
+        WHERE clerk_user_id = ${clerkUserId}
+          AND trip_date >= ${`${monthKey}-01`}::date
+          AND trip_date < ${nextMonthStart(monthKey)}::date
+        ORDER BY trip_date ASC, created_at ASC
+      `
+    : await db`
+        SELECT id, trip_date::text, from_place, to_place, km, purpose, vehicle, amount_pln, rate_pln_per_km
+        FROM trips
+        WHERE clerk_user_id = ${clerkUserId}
+        ORDER BY trip_date ASC, created_at ASC
+        LIMIT ${MAX_TRIPS_PER_USER}
+      `;
   return (rows as TripRow[]).map(rowToTrip);
 }

@@ -1,12 +1,11 @@
-import type { Trip } from "./types";
-import { VEHICLE_RATES } from "./rates";
-import { formatDatePl } from "./format";
+import { buildEwidencja, EWIDENCJA_COLUMNS } from "./ewidencja";
+import type { EwidencjaProfile, Trip } from "./types";
 
 /**
  * Neutralize CSV/Excel formula injection for user-controlled cells.
  * Prefix apostrophe for cells starting with = + - @ or leading tab/CR/LF.
  */
-function neutralizeCsvCell(value: string): string {
+export function neutralizeCsvCell(value: string): string {
   if (/^[=+\-@\t\r\n]/.test(value)) {
     return `'${value}`;
   }
@@ -14,41 +13,47 @@ function neutralizeCsvCell(value: string): string {
 }
 
 function escapeCsv(value: string | number): string {
-  const s = neutralizeCsvCell(String(value));
+  const s = typeof value === "number" ? String(value) : neutralizeCsvCell(value);
   if (/[",;\n\r]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`;
   }
   return s;
 }
 
-export function tripsToCsv(trips: Trip[]): string {
-  const header = [
-    "Data",
-    "Skąd",
-    "Dokąd",
-    "Km",
-    "Cel",
-    "Pojazd",
-    "Stawka (zł/km)",
-    "Kwota (zł)",
-  ];
-  const rows = trips.map((t) => {
-    const rate = VEHICLE_RATES[t.vehicle];
-    return [
-      formatDatePl(t.date),
-      t.from,
-      t.to,
-      t.km.toFixed(1).replace(".", ","),
-      t.purpose,
-      rate.label,
-      rate.rate.toFixed(2).replace(".", ","),
-      t.amount.toFixed(2).replace(".", ","),
-    ]
-      .map(escapeCsv)
-      .join(";");
-  });
+const num = (n: number, digits: number) => n.toFixed(digits).replace(".", ",");
+
+/** CSV (UTF-8 BOM, `;`) of the ewidencja: header block, table, totals, signatures. */
+export function tripsToCsv(
+  trips: Trip[],
+  profile: EwidencjaProfile | null = null,
+  monthKey?: string,
+): string {
+  const e = buildEwidencja(trips, profile, monthKey);
+  const line = (cells: Array<string | number>) => cells.map(escapeCsv).join(";");
+  const out: string[] = [];
+  out.push(line([e.title]));
+  for (const [k, v] of e.meta) out.push(line([k, v]));
+  out.push("");
+  out.push(line([...EWIDENCJA_COLUMNS]));
+  for (const r of e.rows) {
+    out.push(
+      line([
+        r.lp,
+        r.date,
+        r.route,
+        r.purpose,
+        num(r.km, 1),
+        r.vehicle,
+        num(r.rate, r.rate * 100 === Math.round(r.rate * 100) ? 2 : 4),
+        num(r.amount, 2),
+      ]),
+    );
+  }
+  out.push(line(["", "", "", "RAZEM", num(e.totals.km, 1), "", "", num(e.totals.amount, 2)]));
+  out.push("");
+  for (const f of e.footer) out.push(line([f]));
   // BOM for Excel UTF-8
-  return "\uFEFF" + [header.join(";"), ...rows].join("\n");
+  return "\uFEFF" + out.join("\n");
 }
 
 export function downloadBlob(blob: Blob, filename: string): void {
@@ -60,11 +65,15 @@ export function downloadBlob(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function exportCsv(trips: Trip[]): void {
-  const csv = tripsToCsv(trips);
+export function exportCsv(
+  trips: Trip[],
+  profile: EwidencjaProfile | null = null,
+  monthKey?: string,
+): void {
+  const csv = tripsToCsv(trips, profile, monthKey);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const stamp = new Date().toISOString().slice(0, 10);
-  downloadBlob(blob, `ewidencja-kilometrowka-${stamp}.csv`);
+  downloadBlob(blob, `ewidencja-kilometrowka-${monthKey || stamp}.csv`);
 }
 
 /**
@@ -82,7 +91,7 @@ export async function exportXlsx(monthKey?: string): Promise<string | null> {
     }
     const blob = await res.blob();
     const stamp = new Date().toISOString().slice(0, 10);
-    downloadBlob(blob, `ewidencja-kilometrowka-${stamp}.xlsx`);
+    downloadBlob(blob, `ewidencja-kilometrowka-${monthKey || stamp}.xlsx`);
     return null;
   } catch {
     return "Błąd sieci. Spróbuj ponownie.";

@@ -19,7 +19,7 @@ const steps = [
   {
     n: "2",
     title: "Pilnuj ewidencji",
-    text: "Edytuj, usuwaj, filtruj po miesiącu, przeglądaj sumy. Wszystko lokalnie.",
+    text: "Edytuj, usuwaj, filtruj po miesiącu, przeglądaj sumy. Lokalnie (Gość) albo na koncie.",
   },
   {
     n: "3",
@@ -49,15 +49,16 @@ export default function HomePage() {
       <section className="border-b border-slate-200 bg-gradient-to-b from-slate-50 to-white">
         <div className="mx-auto max-w-5xl px-4 py-14 sm:py-20">
           <p className="text-sm font-medium text-slate-500">
-            Stawki {KILOMETROWKA_YEAR} · Dz.U. 2023 poz. 5
+            Stawki {KILOMETROWKA_YEAR} · rozporządzenie MI (Dz.U. 2002 nr 27 poz. 271 ze zm.)
           </p>
           <h1 className="mt-3 max-w-2xl text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-            Ewidencja kilometrówki bez Excela i bez konta
+            Ewidencja kilometrówki bez Excela
           </h1>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-slate-600 sm:text-lg">
             Prosty kalkulator i dziennik przejazdów po polsku: stawki za km,
-            diety krajowe, eksport CSV i Excel. Dane zostają w Twojej
-            przeglądarce.
+            diety krajowe, eksport CSV i Excel. Zacznij bez konta: w trybie
+            Gościa dane zostają w Twojej przeglądarce. Załóż konto, by mieć je
+            na każdym urządzeniu.
           </p>
           <p className="mt-3 text-sm font-medium text-slate-700">
             MVP dla JDG i pracowników — uczciwie, bez marketingowych bajerów.

@@ -30,6 +30,8 @@ export default function SuccessClient() {
   useEffect(() => {
     if (!sessionId || !isLoaded) return;
     if (!isSignedIn) {
+      // Clerk auth state is an external system; one-off status sync.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setStatus("signin");
       return;
     }
@@ -115,7 +117,7 @@ export default function SuccessClient() {
           Premium odblokowane
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-slate-700">
-          Dziękujemy za zakup. Masz nielimitowane przejazdy, Excel i diety. Plan Premium jest zapisany na Twoim koncie i działa na wszystkich urządzeniach.
+          Dziękujemy za zakup. Masz nielimitowane przejazdy, Excel i diety. Plan Premium jest zapisany na Twoim koncie i działa na wszystkich urządzeniach. Subskrypcja odnawia się automatycznie — zrezygnować możesz w każdej chwili w ustawieniach konta (Zarządzaj subskrypcją); rezygnacja działa z końcem opłaconego okresu.
         </p>
         <Link
           href="/kalkulator"
@@ -133,7 +135,7 @@ export default function SuccessClient() {
         <h1 className="text-2xl font-bold text-slate-900">Brak sesji płatności</h1>
         <p className="mt-3 text-sm text-slate-600">
           Nie znaleziono potwierdzenia płatności. Jeśli właśnie zapłaciłeś,
-          wróć z linku sukcesu z checkoutu albo napisz na kontakt@kilometrowka.app.
+          wróć z linku sukcesu z checkoutu albo napisz na djpablo312@icloud.com.
         </p>
         <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Link
@@ -161,7 +163,7 @@ export default function SuccessClient() {
       <p className="mt-3 text-sm text-slate-700">
         {status === "unpaid"
           ? "Płatność nie została potwierdzona. Premium nie zostało odblokowane."
-          : "Nie udało się zweryfikować płatności. Premium nie zostało odblokowane — spróbuj ponownie lub napisz do nas."}
+          : "Nie udało się zweryfikować płatności. Premium nie zostało odblokowane — odśwież stronę za chwilę (aktywacja może potrwać kilkanaście sekund) lub napisz na djpablo312@icloud.com."}
       </p>
       <div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <Link

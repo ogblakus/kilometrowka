@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import WaitlistForm from "@/components/WaitlistForm";
 import {
   FREE_TRIPS_PER_MONTH,
   PREMIUM_PRICE_MONTHLY,
   PREMIUM_PRICE_YEARLY,
+  YEARLY_SAVINGS,
 } from "@/lib/plan";
+import { OPERATOR } from "@/lib/legal";
 import { KILOMETROWKA_YEAR } from "@/lib/rates";
 
 export default function PricingSection() {
@@ -23,7 +24,8 @@ export default function PricingSection() {
             <h2 className="text-2xl font-bold text-slate-900">Cennik</h2>
             <p className="mt-2 max-w-2xl text-slate-600">
               Zacznij za darmo. Premium odblokowuje Excel, diety i nielimitowaną
-              ewidencję. Dane nadal zostają w Twojej przeglądarce.
+              ewidencję. Premium wymaga konta: ewidencja jest przechowywana na
+              serwerze i synchronizowana między urządzeniami.
             </p>
           </div>
           <div
@@ -52,7 +54,7 @@ export default function PricingSection() {
               }`}
             >
               Rocznie{" "}
-              <span className="text-xs opacity-80">(-20%)</span>
+              <span className="text-xs opacity-80">(−{YEARLY_SAVINGS} zł)</span>
             </button>
           </div>
         </div>
@@ -92,15 +94,20 @@ export default function PricingSection() {
             </p>
             <p className="mt-1 text-sm text-slate-500">
               {yearly
-                ? `ok. ${Math.round(PREMIUM_PRICE_YEARLY / 12)} zł/mies · oszczędzasz ${PREMIUM_PRICE_MONTHLY * 12 - PREMIUM_PRICE_YEARLY} zł`
-                : `lub ${PREMIUM_PRICE_YEARLY} zł/rok (−20%)`}
+                ? `ok. ${Math.round(PREMIUM_PRICE_YEARLY / 12)} zł/mies · oszczędzasz ${YEARLY_SAVINGS} zł`
+                : `lub ${PREMIUM_PRICE_YEARLY} zł/rok (oszczędzasz ${YEARLY_SAVINGS} zł)`}
             </p>
             <ul className="mt-4 flex-1 space-y-2 text-sm text-slate-600">
               <li>✓ Nielimitowane przejazdy</li>
               <li>✓ Eksport CSV i Excel</li>
               <li>✓ Kalkulator diet krajowych</li>
-              <li>✓ Bez reklam</li>
+              <li>✓ Synchronizacja między urządzeniami</li>
             </ul>
+            <p className="mt-3 text-xs text-slate-500">
+              Subskrypcja odnawiana automatycznie, bez minimalnego okresu —
+              rezygnacja w każdej chwili, z końcem opłaconego okresu. Cena
+              ostateczna (sprzedawca zwolniony z VAT).
+            </p>
             <Link
               href="/kup"
               className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
@@ -125,33 +132,28 @@ export default function PricingSection() {
           <div className="flex flex-col rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <p className="text-sm font-medium text-slate-500">Dla firm</p>
             <p className="mt-1 text-3xl font-bold text-slate-900">
+              <span className="text-base font-normal text-slate-500">od </span>
               99{" "}
               <span className="text-base font-normal text-slate-500">
-                zł/mies
+                zł / mies.
               </span>
             </p>
-            <p className="mt-1 text-sm text-slate-500">wycena indywidualna</p>
+            <p className="mt-1 text-sm text-slate-500">
+              cena ustalana indywidualnie po rozmowie, zależnie od liczby
+              użytkowników
+            </p>
             <ul className="mt-4 flex-1 space-y-2 text-sm text-slate-600">
               <li>• Wiele użytkowników / pojazdów</li>
               <li>• Eksport i raporty dla HR</li>
               <li>• Wsparcie wdrożenia</li>
-              <li>• Faktura VAT (po ustaleniu)</li>
+              <li>• Faktura (bez VAT – zwolnienie z art. 113 ustawy o VAT)</li>
             </ul>
             <a
-              href="mailto:kontakt@kilometrowka.app?subject=Kilometr%C3%B3wka.app%20%E2%80%94%20oferta%20dla%20firm"
+              href={`mailto:${OPERATOR.email}?subject=Kilometr%C3%B3wka.app%20%E2%80%94%20oferta%20dla%20firm`}
               className="mt-6 inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
             >
               Napisz do nas
             </a>
-            <div className="mt-4 border-t border-slate-100 pt-4">
-              <p className="mb-2 text-xs text-slate-500">
-                Albo zostaw e-mail (zapis lokalny):
-              </p>
-              <WaitlistForm
-                successMessage="Dziękujemy! Zapisaliśmy kontakt lokalnie — odezwijemy się w sprawie oferty dla firm."
-                buttonLabel="Wyślij zainteresowanie"
-              />
-            </div>
           </div>
         </div>
       </div>

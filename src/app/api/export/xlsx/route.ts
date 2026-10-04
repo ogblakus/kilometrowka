@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuthUser } from "@/lib/auth-api";
+import { rateLimitResponse } from "@/lib/rate-limit";
+import { getProfile } from "@/lib/users";
 import { buildTripsXlsx } from "@/lib/export-xlsx";
 import { listTripsForExport } from "@/lib/trips-db";
 
@@ -22,6 +24,9 @@ export async function GET(request: Request) {
     );
   }
 
+  const limited = await rateLimitResponse("export", authResult.userId);
+  if (limited) return limited;
+
   const month = new URL(request.url).searchParams.get("month")?.trim() || "";
   if (month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) {
     return NextResponse.json(
@@ -31,8 +36,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const trips = await listTripsForExport(authResult.userId, month || undefined);
-    const buf = await buildTripsXlsx(trips);
+    const [trips, profile] = await Promise.all([
+      listTripsForExport(authResult.userId, month || undefined),
+      getProfile(authResult.userId),
+    ]);
+    const buf = await buildTripsXlsx(trips, profile, month || undefined);
     const stamp = new Date().toISOString().slice(0, 10);
     return new NextResponse(new Uint8Array(buf), {
       status: 200,
